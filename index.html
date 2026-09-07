@@ -238,7 +238,15 @@ function loadSheetData() {
 function processAndRender(rawRows) {
   if (!rawRows || rawRows.length < 7) return;
 
-// 1. Ambil teks khusus baris ke-6 (index 5) dan baris ke-5 (index 4) untuk fleksibilitas
+// Tambahkan baris ini di paling atas processAndRender
+const combinedHeaders = rawRows[0] ? rawRows[0].map((_, colIndex) => {
+  return rawRows.slice(0, 6)
+    .map(row => String(row[colIndex] || "").trim())
+    .filter(Boolean)
+    .join(" ");
+}) : [];
+  
+  // 1. Ambil teks khusus baris ke-6 (index 5) dan baris ke-5 (index 4) untuk fleksibilitas
   const subHeaders = rawRows[5] ? rawRows[5].map(v => String(v || "").trim().toUpperCase()) : [];
   const midHeaders = rawRows[4] ? rawRows[4].map(v => String(v || "").trim().toUpperCase()) : [];
 
