@@ -91,7 +91,7 @@ th{position:sticky;top:0;background:#f7f9fb;z-index:2}
   <div class="grid two" style="margin-top:16px">
     <section class="card">
       <h2>Monitoring TPH — T1, T2, T3 & Last TPH</h2>
-      <p class="desc"><b>T1, T2, T3, dan Last TPH</b> mengikuti angka rekap resmi pada Data Master untuk lokasi yang dipilih.</p>
+      <p class="desc">Jumlah <b>grid yang sudah memiliki data monitoring TPH</b> pada setiap tahapan.</p>
       <div class="chart"><canvas id="tphChart"></canvas></div>
     </section>
 
@@ -141,29 +141,85 @@ th{position:sticky;top:0;background:#f7f9fb;z-index:2}
 
 <script>
 const SHEETS = ["4D-26", "5B-41", "5A-58B", "5C-69B", "4E-21", "5B-88"];
-// Gantilah objek REKAP_DATA dan fungsi renderCharts dengan kode berikut:
 
 const REKAP_DATA = {
-  // Nilai tph memuat Rata-Rata Kadar TPH (%) [Initial/T1, T2, T3, Last TPH]
-  "4D-26":  { totalGrid: 7,   initialTPH: 7,   initialTPC: 7,   initialSoil: 7,   biostimulasi: 7,   bioaugmentasi: 4,   tph: [7.5, 5.2, 3.1, 0.8], qualityInit: [5, 2, 0], qualityProg: [1, 2, 4], material: [120, 80, 50, 200, 150] },
-  "5B-41":  { totalGrid: 296, initialTPH: 189, initialTPC: 295, initialSoil: 296, biostimulasi: 290, bioaugmentasi: 206, tph: [8.2, 6.0, 3.8, 0.9], qualityInit: [120, 50, 19], qualityProg: [40, 60, 190], material: [500, 350, 200, 800, 600] },
-  "5A-58B": { totalGrid: 27,  initialTPH: 27,  initialTPC: 27,  initialSoil: 27,  biostimulasi: 27,  bioaugmentasi: 27,  tph: [6.8, 4.5, 2.3, 0.5], qualityInit: [20, 7, 0], qualityProg: [2, 5, 20], material: [200, 150, 100, 300, 250] },
-  "5C-69B": { totalGrid: 19,  initialTPH: 19,  initialTPC: 19,  initialSoil: 19,  biostimulasi: 19,  bioaugmentasi: 19,  tph: [9.1, 6.4, 3.9, 0.7], qualityInit: [15, 4, 0], qualityProg: [0, 2, 17], material: [150, 100, 80, 250, 180] },
-  "4E-21":  { totalGrid: 38,  initialTPH: 19,  initialTPC: 19,  initialSoil: 12,  biostimulasi: 12,  bioaugmentasi: 12,  tph: [5.4, 3.8, 2.0, 0.6], qualityInit: [12, 7, 0], qualityProg: [3, 4, 12], material: [100, 70, 40, 150, 100] },
-  "5B-88":  { totalGrid: 5,   initialTPH: 5,   initialTPC: 4,   initialSoil: 4,   biostimulasi: 4,   bioaugmentasi: 0,   tph: [4.9, 3.1, 1.5, 0.4], qualityInit: [4, 1, 0], qualityProg: [1, 1, 3], material: [40, 30, 20, 60, 50] }
+  // tphGridCounts: [Jumlah Grid T1, T2, T3, Last TPH]
+  "4D-26":  { totalGrid: 7,   initialTPH: 7,   initialTPC: 7,   initialSoil: 7,   biostimulasi: 7,   bioaugmentasi: 4,   tphGridCounts: [7, 7, 5, 4], qualityInit: [5, 2, 0], qualityProg: [1, 2, 4], material: [120, 80, 50, 200, 150] },
+  "5B-41":  { totalGrid: 296, initialTPH: 189, initialTPC: 295, initialSoil: 296, biostimulasi: 290, bioaugmentasi: 206, tphGridCounts: [189, 150, 100, 75], qualityInit: [120, 50, 19], qualityProg: [40, 60, 190], material: [500, 350, 200, 800, 600] },
+  "5A-58B": { totalGrid: 27,  initialTPH: 27,  initialTPC: 27,  initialSoil: 27,  biostimulasi: 27,  bioaugmentasi: 27,  tphGridCounts: [27, 27, 20, 15], qualityInit: [20, 7, 0], qualityProg: [2, 5, 20], material: [200, 150, 100, 300, 250] },
+  "5C-69B": { totalGrid: 19,  initialTPH: 19,  initialTPC: 19,  initialSoil: 19,  biostimulasi: 19,  bioaugmentasi: 19,  tphGridCounts: [19, 18, 15, 10], qualityInit: [15, 4, 0], qualityProg: [0, 2, 17], material: [150, 100, 80, 250, 180] },
+  "4E-21":  { totalGrid: 38,  initialTPH: 19,  initialTPC: 19,  initialSoil: 12,  biostimulasi: 12,  bioaugmentasi: 12,  tphGridCounts: [19, 15, 10, 8], qualityInit: [12, 7, 0], qualityProg: [3, 4, 12], material: [100, 70, 40, 150, 100] },
+  "5B-88":  { totalGrid: 5,   initialTPH: 5,   initialTPC: 4,   initialSoil: 4,   biostimulasi: 4,   bioaugmentasi: 0,   tphGridCounts: [5, 4, 2, 1], qualityInit: [4, 1, 0], qualityProg: [1, 1, 3], material: [40, 30, 20, 60, 50] }
 };
+
+let selectedLoc = SHEETS[0];
+let charts = {};
+
+function init() {
+  const select = document.getElementById("loc");
+  SHEETS.forEach(s => {
+    const opt = document.createElement("option");
+    opt.value = s;
+    opt.textContent = "LOKASI MINAS / " + s;
+    select.appendChild(opt);
+  });
+
+  select.addEventListener("change", (e) => {
+    selectedLoc = e.target.value;
+    render();
+  });
+
+  render();
+}
+
+function render() {
+  const rekap = REKAP_DATA[selectedLoc];
+  
+  document.getElementById("kpis").innerHTML = `
+    <div class="card"><div class="label">Total Sub-Grid</div><div class="value">${rekap.totalGrid}</div><div class="sub">Total area lokasi</div></div>
+    <div class="card"><div class="label">Inisial TPH</div><div class="value">${rekap.initialTPH}</div><div class="sub">${Math.round(rekap.initialTPH/rekap.totalGrid*100)}% dari Total Grid</div></div>
+    <div class="card"><div class="label">Biostimulasi</div><div class="value">${rekap.biostimulasi}</div><div class="sub">${Math.round(rekap.biostimulasi/rekap.totalGrid*100)}% dari Total Grid</div></div>
+    <div class="card"><div class="label">Bioaugmentasi</div><div class="value">${rekap.bioaugmentasi}</div><div class="sub">${Math.round(rekap.bioaugmentasi/rekap.totalGrid*100)}% dari Total Grid</div></div>
+    <div class="card"><div class="label">Inisial TPC</div><div class="value">${rekap.initialTPC}</div><div class="sub">${Math.round(rekap.initialTPC/rekap.totalGrid*100)}% dari Total Grid</div></div>
+    <div class="card"><div class="label">Inisial Soil</div><div class="value">${rekap.initialSoil}</div><div class="sub">${Math.round(rekap.initialSoil/rekap.totalGrid*100)}% dari Total Grid</div></div>
+  `;
+
+  document.getElementById("droneBefore").innerHTML = `<div class="drone-empty">Foto Udara Sebelum Pemulihan (${selectedLoc})</div>`;
+  document.getElementById("droneAfter").innerHTML = `<div class="drone-empty">Foto Udara Saat Pemulihan (${selectedLoc})</div>`;
+
+  renderProgressLists(rekap);
+  renderCharts(rekap);
+}
+
+function renderProgressLists(rekap) {
+  document.getElementById("stages").innerHTML = `
+    <div class="r"><span>Inisial TPH</span><div class="bar"><i style="width:${(rekap.initialTPH/rekap.totalGrid*100)}%"></i></div><b>${rekap.initialTPH}/${rekap.totalGrid}</b></div>
+    <div class="r"><span>Inisial TPC</span><div class="bar"><i style="width:${(rekap.initialTPC/rekap.totalGrid*100)}%"></i></div><b>${rekap.initialTPC}/${rekap.totalGrid}</b></div>
+    <div class="r"><span>Inisial Soil</span><div class="bar"><i style="width:${(rekap.initialSoil/rekap.totalGrid*100)}%"></i></div><b>${rekap.initialSoil}/${rekap.totalGrid}</b></div>
+  `;
+
+  document.getElementById("extra").innerHTML = `
+    <div class="r"><span>Biostimulasi</span><div class="bar"><i style="width:${(rekap.biostimulasi/rekap.totalGrid*100)}%"></i></div><b>${rekap.biostimulasi}/${rekap.totalGrid}</b></div>
+    <div class="r"><span>Bioaugmentasi</span><div class="bar"><i style="width:${(rekap.bioaugmentasi/rekap.totalGrid*100)}%"></i></div><b>${rekap.bioaugmentasi}/${rekap.totalGrid}</b></div>
+  `;
+
+  document.getElementById("initialSoil").innerHTML = `
+    <div class="r"><span>Inisial TPC</span><div class="bar"><i style="width:${(rekap.initialTPC/rekap.totalGrid*100)}%"></i></div><b>${Math.round(rekap.initialTPC/rekap.totalGrid*100)}%</b></div>
+    <div class="r"><span>Inisial pH/Suhu/Kelembaban</span><div class="bar"><i style="width:${(rekap.initialSoil/rekap.totalGrid*100)}%"></i></div><b>${Math.round(rekap.initialSoil/rekap.totalGrid*100)}%</b></div>
+  `;
+}
 
 function renderCharts(rekap) {
   Object.values(charts).forEach(chart => chart.destroy());
 
-  // 1. Chart TPH (Rata-rata Kadar TPH dalam %)
+  // 1. Chart TPH Monitoring (Jumlah Grid per Tahap)
   charts.tph = new Chart(document.getElementById("tphChart"), {
     type: "bar",
     data: {
-      labels: ["Initial TPH", "T1", "T2", "Last TPH"],
+      labels: ["T1", "T2", "T3", "Last TPH"],
       datasets: [{
-        label: "Rata-rata TPH (%)",
-        data: rekap.tph,
+        label: "Jumlah Grid Ter-monitoring",
+        data: rekap.tphGridCounts,
         backgroundColor: "#1c6da4",
         borderRadius: 6
       }]
@@ -174,7 +230,7 @@ function renderCharts(rekap) {
       scales: {
         y: {
           beginAtZero: true,
-          title: { display: true, text: "Kadar TPH (%)" }
+          title: { display: true, text: "Jumlah Grid" }
         }
       }
     }
@@ -217,89 +273,6 @@ function renderCharts(rekap) {
         }
       }
     }
-  });
-}
-
-function render() {
-  const rekap = REKAP_DATA[selectedLoc];
-  
-  // Render KPIs
-  document.getElementById("kpis").innerHTML = `
-    <div class="card"><div class="label">Total Sub-Grid</div><div class="value">${rekap.totalGrid}</div><div class="sub">Total area lokasi</div></div>
-    <div class="card"><div class="label">Inisial TPH</div><div class="value">${rekap.initialTPH}</div><div class="sub">${Math.round(rekap.initialTPH/rekap.totalGrid*100)}% dari Total Grid</div></div>
-    <div class="card"><div class="label">Biostimulasi</div><div class="value">${rekap.biostimulasi}</div><div class="sub">${Math.round(rekap.biostimulasi/rekap.totalGrid*100)}% dari Total Grid</div></div>
-    <div class="card"><div class="label">Bioaugmentasi</div><div class="value">${rekap.bioaugmentasi}</div><div class="sub">${Math.round(rekap.bioaugmentasi/rekap.totalGrid*100)}% dari Total Grid</div></div>
-    <div class="card"><div class="label">Inisial TPC</div><div class="value">${rekap.initialTPC}</div><div class="sub">${Math.round(rekap.initialTPC/rekap.totalGrid*100)}% dari Total Grid</div></div>
-    <div class="card"><div class="label">Inisial Soil</div><div class="value">${rekap.initialSoil}</div><div class="sub">${Math.round(rekap.initialSoil/rekap.totalGrid*100)}% dari Total Grid</div></div>
-  `;
-
-  document.getElementById("droneBefore").innerHTML = `<div class="drone-empty">Foto Udara Sebelum Pemulihan (${selectedLoc})</div>`;
-  document.getElementById("droneAfter").innerHTML = `<div class="drone-empty">Foto Udara Saat Pemulihan (${selectedLoc})</div>`;
-
-  renderProgressLists(rekap);
-  renderCharts(rekap);
-}
-
-function renderProgressLists(rekap) {
-  document.getElementById("stages").innerHTML = `
-    <div class="r"><span>Inisial TPH</span><div class="bar"><i style="width:${(rekap.initialTPH/rekap.totalGrid*100)}%"></i></div><b>${rekap.initialTPH}/${rekap.totalGrid}</b></div>
-    <div class="r"><span>Inisial TPC</span><div class="bar"><i style="width:${(rekap.initialTPC/rekap.totalGrid*100)}%"></i></div><b>${rekap.initialTPC}/${rekap.totalGrid}</b></div>
-    <div class="r"><span>Inisial Soil</span><div class="bar"><i style="width:${(rekap.initialSoil/rekap.totalGrid*100)}%"></i></div><b>${rekap.initialSoil}/${rekap.totalGrid}</b></div>
-  `;
-
-  document.getElementById("extra").innerHTML = `
-    <div class="r"><span>Biostimulasi</span><div class="bar"><i style="width:${(rekap.biostimulasi/rekap.totalGrid*100)}%"></i></div><b>${rekap.biostimulasi}/${rekap.totalGrid}</b></div>
-    <div class="r"><span>Bioaugmentasi</span><div class="bar"><i style="width:${(rekap.bioaugmentasi/rekap.totalGrid*100)}%"></i></div><b>${rekap.bioaugmentasi}/${rekap.totalGrid}</b></div>
-  `;
-
-  document.getElementById("initialSoil").innerHTML = `
-    <div class="r"><span>Inisial TPC</span><div class="bar"><i style="width:${(rekap.initialTPC/rekap.totalGrid*100)}%"></i></div><b>${Math.round(rekap.initialTPC/rekap.totalGrid*100)}%</b></div>
-    <div class="r"><span>Inisial pH/Suhu/Kelembaban</span><div class="bar"><i style="width:${(rekap.initialSoil/rekap.totalGrid*100)}%"></i></div><b>${Math.round(rekap.initialSoil/rekap.totalGrid*100)}%</b></div>
-  `;
-}
-
-function renderCharts(rekap) {
-  // Hapus chart lama jika ada
-  Object.values(charts).forEach(chart => chart.destroy());
-
-  // 1. Chart TPH
-  charts.tph = new Chart(document.getElementById("tphChart"), {
-    type: "bar",
-    data: {
-      labels: ["T1", "T2", "T3", "Last TPH"],
-      datasets: [{ label: "Jumlah Grid", data: rekap.tph, backgroundColor: "#1c6da4" }]
-    },
-    options: { responsive: true, maintainAspectRatio: false }
-  });
-
-  // 2. Chart Initial Quality (Doughnut/Pie)
-  charts.qualInit = new Chart(document.getElementById("qualInitialChart"), {
-    type: "doughnut",
-    data: {
-      labels: ["TKA", "TKB", "TKC"],
-      datasets: [{ data: rekap.qualityInit, backgroundColor: ["#e74c3c", "#f39c12", "#2ecc71"] }]
-    },
-    options: { responsive: true, maintainAspectRatio: false }
-  });
-
-  // 3. Chart Progress Quality (Doughnut/Pie)
-  charts.qualProg = new Chart(document.getElementById("qualProgressChart"), {
-    type: "doughnut",
-    data: {
-      labels: ["TKA", "TKB", "TKC"],
-      datasets: [{ data: rekap.qualityProg, backgroundColor: ["#e74c3c", "#f39c12", "#2ecc71"] }]
-    },
-    options: { responsive: true, maintainAspectRatio: false }
-  });
-
-  // 4. Chart Material
-  charts.mat = new Chart(document.getElementById("matChart"), {
-    type: "bar",
-    data: {
-      labels: ["Urea", "TSP", "Dolomit", "Kohe", "Bulking Agent"],
-      datasets: [{ label: "Penggunaan (kg)", data: rekap.material, backgroundColor: "#27ae60" }]
-    },
-    options: { responsive: true, maintainAspectRatio: false }
   });
 }
 
