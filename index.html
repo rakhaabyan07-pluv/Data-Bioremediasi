@@ -463,6 +463,17 @@ function renderProgressLists(cInit, cTPC, cSoil, cBioS, cBioA, total) {
   `;
 }
 
+  document.getElementById("extra").innerHTML = `
+    <div class="r"><span>Biostimulasi</span><div class="bar"><i style="width:${(cBioS/t*100)}%"></i></div><b>${cBioS}/${total}</b></div>
+    <div class="r"><span>Bioaugmentasi</span><div class="bar"><i style="width:${(cBioA/t*100)}%"></i></div><b>${cBioA}/${total}</b></div>
+  `;
+
+  document.getElementById("initialSoil").innerHTML = `
+    <div class="r"><span>Inisial TPC</span><div class="bar"><i style="width:${(cTPC/t*100)}%"></i></div><b>${Math.round(cTPC/t*100)}%</b></div>
+    <div class="r"><span>Inisial pH/Suhu/Kelembaban</span><div class="bar"><i style="width:${(cSoil/t*100)}%"></i></div><b>${Math.round(cSoil/t*100)}%</b></div>
+  `;
+}
+
 function renderTableByIndex(rows, idxs) {
   const tbody = document.getElementById("body");
   tbody.innerHTML = "";
