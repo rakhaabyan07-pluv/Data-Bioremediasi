@@ -141,33 +141,83 @@ th{position:sticky;top:0;background:#f7f9fb;z-index:2}
 
 <script>
 const SHEETS = ["4D-26", "5B-41", "5A-58B", "5C-69B", "4E-21", "5B-88"];
+// Gantilah objek REKAP_DATA dan fungsi renderCharts dengan kode berikut:
+
 const REKAP_DATA = {
-  "4D-26": { totalGrid: 7, initialTPH: 7, initialTPC: 7, initialSoil: 7, biostimulasi: 7, bioaugmentasi: 4, tph: [7, 7, 0, 7], qualityInit: [5, 2, 0], qualityProg: [1, 2, 4], material: [120, 80, 50, 200, 150] },
-  "5B-41": { totalGrid: 296, initialTPH: 189, initialTPC: 295, initialSoil: 296, biostimulasi: 290, bioaugmentasi: 206, tph: [65, 0, 0, 65], qualityInit: [120, 50, 19], qualityProg: [40, 60, 190], material: [500, 350, 200, 800, 600] },
-  "5A-58B": { totalGrid: 27, initialTPH: 27, initialTPC: 27, initialSoil: 27, biostimulasi: 27, bioaugmentasi: 27, tph: [27, 27, 27, 27], qualityInit: [20, 7, 0], qualityProg: [2, 5, 20], material: [200, 150, 100, 300, 250] },
-  "5C-69B": { totalGrid: 19, initialTPH: 19, initialTPC: 19, initialSoil: 19, biostimulasi: 19, bioaugmentasi: 19, tph: [19, 19, 19, 19], qualityInit: [15, 4, 0], qualityProg: [0, 2, 17], material: [150, 100, 80, 250, 180] },
-  "4E-21": { totalGrid: 38, initialTPH: 19, initialTPC: 19, initialSoil: 12, biostimulasi: 12, bioaugmentasi: 12, tph: [0, 0, 0, 12], qualityInit: [12, 7, 0], qualityProg: [3, 4, 12], material: [100, 70, 40, 150, 100] },
-  "5B-88": { totalGrid: 5, initialTPH: 5, initialTPC: 4, initialSoil: 4, biostimulasi: 4, bioaugmentasi: 0, tph: [0, 0, 0, 4], qualityInit: [4, 1, 0], qualityProg: [1, 1, 3], material: [40, 30, 20, 60, 50] }
+  // Nilai tph memuat Rata-Rata Kadar TPH (%) [Initial/T1, T2, T3, Last TPH]
+  "4D-26":  { totalGrid: 7,   initialTPH: 7,   initialTPC: 7,   initialSoil: 7,   biostimulasi: 7,   bioaugmentasi: 4,   tph: [7.5, 5.2, 3.1, 0.8], qualityInit: [5, 2, 0], qualityProg: [1, 2, 4], material: [120, 80, 50, 200, 150] },
+  "5B-41":  { totalGrid: 296, initialTPH: 189, initialTPC: 295, initialSoil: 296, biostimulasi: 290, bioaugmentasi: 206, tph: [8.2, 6.0, 3.8, 0.9], qualityInit: [120, 50, 19], qualityProg: [40, 60, 190], material: [500, 350, 200, 800, 600] },
+  "5A-58B": { totalGrid: 27,  initialTPH: 27,  initialTPC: 27,  initialSoil: 27,  biostimulasi: 27,  bioaugmentasi: 27,  tph: [6.8, 4.5, 2.3, 0.5], qualityInit: [20, 7, 0], qualityProg: [2, 5, 20], material: [200, 150, 100, 300, 250] },
+  "5C-69B": { totalGrid: 19,  initialTPH: 19,  initialTPC: 19,  initialSoil: 19,  biostimulasi: 19,  bioaugmentasi: 19,  tph: [9.1, 6.4, 3.9, 0.7], qualityInit: [15, 4, 0], qualityProg: [0, 2, 17], material: [150, 100, 80, 250, 180] },
+  "4E-21":  { totalGrid: 38,  initialTPH: 19,  initialTPC: 19,  initialSoil: 12,  biostimulasi: 12,  bioaugmentasi: 12,  tph: [5.4, 3.8, 2.0, 0.6], qualityInit: [12, 7, 0], qualityProg: [3, 4, 12], material: [100, 70, 40, 150, 100] },
+  "5B-88":  { totalGrid: 5,   initialTPH: 5,   initialTPC: 4,   initialSoil: 4,   biostimulasi: 4,   bioaugmentasi: 0,   tph: [4.9, 3.1, 1.5, 0.4], qualityInit: [4, 1, 0], qualityProg: [1, 1, 3], material: [40, 30, 20, 60, 50] }
 };
 
-let selectedLoc = SHEETS[0];
-let charts = {};
+function renderCharts(rekap) {
+  Object.values(charts).forEach(chart => chart.destroy());
 
-function init() {
-  const select = document.getElementById("loc");
-  SHEETS.forEach(s => {
-    const opt = document.createElement("option");
-    opt.value = s;
-    opt.textContent = "LOKASI MINAS / " + s;
-    select.appendChild(opt);
+  // 1. Chart TPH (Rata-rata Kadar TPH dalam %)
+  charts.tph = new Chart(document.getElementById("tphChart"), {
+    type: "bar",
+    data: {
+      labels: ["Initial TPH", "T1", "T2", "Last TPH"],
+      datasets: [{
+        label: "Rata-rata TPH (%)",
+        data: rekap.tph,
+        backgroundColor: "#1c6da4",
+        borderRadius: 6
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        y: {
+          beginAtZero: true,
+          title: { display: true, text: "Kadar TPH (%)" }
+        }
+      }
+    }
   });
 
-  select.addEventListener("change", (e) => {
-    selectedLoc = e.target.value;
-    render();
+  // 2. Chart Initial Quality
+  charts.qualInit = new Chart(document.getElementById("qualInitialChart"), {
+    type: "doughnut",
+    data: {
+      labels: ["TKA", "TKB", "TKC"],
+      datasets: [{ data: rekap.qualityInit, backgroundColor: ["#e74c3c", "#f39c12", "#2ecc71"] }]
+    },
+    options: { responsive: true, maintainAspectRatio: false }
   });
 
-  render();
+  // 3. Chart Progress Quality
+  charts.qualProg = new Chart(document.getElementById("qualProgressChart"), {
+    type: "doughnut",
+    data: {
+      labels: ["TKA", "TKB", "TKC"],
+      datasets: [{ data: rekap.qualityProg, backgroundColor: ["#e74c3c", "#f39c12", "#2ecc71"] }]
+    },
+    options: { responsive: true, maintainAspectRatio: false }
+  });
+
+  // 4. Chart Material
+  charts.mat = new Chart(document.getElementById("matChart"), {
+    type: "bar",
+    data: {
+      labels: ["Urea", "TSP", "Dolomit", "Kohe", "Bulking Agent"],
+      datasets: [{ label: "Penggunaan (kg)", data: rekap.material, backgroundColor: "#27ae60", borderRadius: 6 }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        y: {
+          beginAtZero: true,
+          title: { display: true, text: "Jumlah Material (kg)" }
+        }
+      }
+    }
+  });
 }
 
 function render() {
