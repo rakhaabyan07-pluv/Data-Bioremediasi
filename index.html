@@ -1,200 +1,16 @@
-<!doctype html>
-<html lang="id">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Dashboard Lokasi Bioremediasi</title>
-<!-- Chart.js & PapaParse CDN -->
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
-<style>
-*{box-sizing:border-box}
-body{margin:0;background:#f3f6fa;color:#172033;font-family:Segoe UI,Arial,sans-serif}
-header{padding:25px 30px;color:white;background:linear-gradient(135deg,#12385e,#2375a6)}
-header h1{margin:0 0 5px}
-header p{margin:0;opacity:.86}
-.wrap{max-width:1500px;margin:auto;padding:20px}
-.controls{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:17px}
-select,input{border:1px solid #dce3eb;border-radius:10px;padding:10px 12px;background:#fff;font-size:14px}
-select{min-width:220px}
-input{flex:1;min-width:250px}
-.grid{display:grid;gap:16px}
-.kpis{grid-template-columns:repeat(6,1fr)}
-.two{grid-template-columns:1.35fr 1fr}
-.card{background:#fff;border:1px solid #e1e7ee;border-radius:15px;padding:18px;box-shadow:0 4px 15px rgba(20,40,70,.05)}
-.label{font-size:11px;color:#687487;text-transform:uppercase}
-.value{font-size:28px;font-weight:800;margin:5px 0}
-.sub,.desc,.note{font-size:12px;color:#687487;line-height:1.5}
-h2{font-size:17px;margin:0 0 5px}
-h3{font-size:13px;margin:16px 0 8px}
-.chart{height:315px;margin-top:10px}
-.stats{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-top:12px}
-.stat{padding:11px 7px;background:#f8fafc;border:1px solid #e5eaf0;border-radius:10px;text-align:center}
-.stat b{font-size:19px;display:block}
-.stat span{font-size:10px;color:#687487}
-.list{display:grid;gap:8px}
-.r{display:grid;grid-template-columns:135px 1fr 60px;gap:9px;align-items:center;font-size:12px}
-.bar{height:9px;background:#edf1f5;border-radius:20px;overflow:hidden}
-.bar i{display:block;height:100%;background:#1c6da4}
-.bio-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:9px;margin-top:13px}
-.bioitem{background:#f8fafc;border:1px solid #e4e9ef;border-radius:10px;padding:10px;text-align:center}
-.bioitem b{display:block;font-size:17px}
-.bioitem span{font-size:10px;color:#687487}
-.tablewrap{max-height:600px;overflow:auto;border:1px solid #e1e6ed;border-radius:10px}
-table{width:100%;border-collapse:collapse;font-size:12px}
-th,td{padding:8px 7px;border-bottom:1px solid #e7ebf0;white-space:nowrap;text-align:left}
-th{position:sticky;top:0;background:#f7f9fb;z-index:2}
-.badge{padding:4px 7px;border-radius:999px;font-weight:700;font-size:10px}
-.tka{background:#fee7e7;color:#a22c2c}
-.tkb{background:#fff0d0;color:#936100}
-.tkc{background:#def4e6;color:#17683e}
-@media(max-width:1100px){.kpis{grid-template-columns:repeat(3,1fr)}.two{grid-template-columns:1fr}.bio-grid{grid-template-columns:repeat(3,1fr)}}
-@media(max-width:650px){.kpis{grid-template-columns:repeat(2,1fr)}.stats,.bio-grid{grid-template-columns:repeat(2,1fr)}}
-.quality-card{min-height:100%}
-.quality-charts{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:14px}
-.quality-panel{border:1px solid #e5eaf0;border-radius:12px;padding:14px;background:#fbfcfe}
-.quality-panel h3{margin:0 0 4px;font-size:14px}
-.quality-explain{margin:0;color:#687487;font-size:11px;line-height:1.5;min-height:42px}
-.quality-chart{height:245px;margin:4px 0 8px}
-.quality-panel .list{gap:6px}
-.quality-panel .r{grid-template-columns:55px 1fr 42px}
-.drone-card{margin-top:16px}
-.drone-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:14px}
-.drone-panel{border:1px solid #e3e8ef;border-radius:12px;padding:12px;background:#fbfcfe}
-.drone-panel h3{margin:0 0 10px}
-.drone-photo{width:100%;height:330px;object-fit:contain;background:#eef2f6;border-radius:10px;display:block}
-.drone-empty{height:330px;display:flex;align-items:center;justify-content:center;color:#687487;background:#eef2f6;border-radius:10px;font-size:13px}
-@media(max-width:800px){.quality-charts,.drone-grid{grid-template-columns:1fr}.quality-chart{height:230px}.drone-photo,.drone-empty{height:250px}}
-</style>
-</head>
-<body>
-<header>
-  <h1>Dashboard Site Remediation</h1>
-  <p>Monitoring TPH •  Monitoring Soil • Biostimulasi • Bioaugmentasi • TPC</p>
-</header>
-<div class="wrap">
-  <div class="controls">
-    <b>Pilih Lokasi:</b>
-    <select id="loc"></select>
-    <input id="search" placeholder="Cari ID Grid, Subgrid, TKA, TKB, atau TKC..." oninput="filterTable()">
-    <button id="refreshBtn" onclick="loadSheetData()" style="border:0;border-radius:10px;padding:10px 14px;background:#12385e;color:#fff;font-weight:700;cursor:pointer">🔄 Update Data</button>
-    <span id="syncStatus" style="font-size:13px;color:#52606d">Memuat data dari Google Sheets CSV...</span>
-  </div>
-
-  <div id="kpis" class="grid kpis"></div>
-
-  <section class="card drone-card">
-    <h2>Foto Udara Lokasi</h2>
-    <p class="desc">Perbandingan kondisi lokasi <b>sebelum pemulihan</b> dan <b>saat pemulihan</b>.</p>
-    <div class="drone-grid">
-      <div class="drone-panel">
-        <h3>SEBELUM PEMULIHAN</h3>
-        <div id="droneBefore"></div>
-      </div>
-      <div class="drone-panel">
-        <h3>SAAT PEMULIHAN</h3>
-        <div id="droneAfter"></div>
-      </div>
-    </div>
-  </section>
-
-  <div class="grid two" style="margin-top:16px">
-    <section class="card">
-      <h2>Monitoring TPH — T1, T2, T3 & Last TPH</h2>
-      <p class="desc">Jumlah grid ter-monitoring yang dihitung secara dinamis dari kolom sheet.</p>
-      <div class="chart"><canvas id="tphChart"></canvas></div>
-      <div id="stats" class="stats"></div>
-    </section>
-
-    <section class="card quality-card">
-      <h2>Quality TPH — Initial vs Progress</h2>
-      <p class="desc">Diagram menunjukkan <b>komposisi kualitas TPH</b> berdasarkan status <b>TKA, TKB, dan TKC</b>.</p>
-      <div class="quality-charts">
-        <div class="quality-panel">
-          <h3>Initial TPH — Quality</h3>
-          <p class="quality-explain">Jumlah grid berdasarkan status kualitas awal (Initial TPH).</p>
-          <div class="quality-chart"><canvas id="qualInitial"></canvas></div>
-          <div id="iq" class="list"></div>
-        </div>
-        <div class="quality-panel">
-          <h3>Progress TPH — Quality</h3>
-          <p class="quality-explain">Jumlah grid berdasarkan status kualitas progress/terakhir.</p>
-          <div class="quality-chart"><canvas id="qualProgress"></canvas></div>
-          <div id="pq" class="list"></div>
-        </div>
-      </div>
-    </section>
-  </div>
-
-  <section class="card" style="margin-top:16px">
-    <h2>Biostimulasi — Rekap & Material</h2>
-    <p class="desc">Jumlah Biostimulasi utama dan rincian pemakaian material Urea, TSP, Dolomit, Kohe, dan Bulking Agent.</p>
-    <div id="biostats" class="bio-grid"></div>
-    <div class="chart" style="height:280px"><canvas id="matChart"></canvas></div>
-    <div id="mt" class="note"></div>
-  </section>
-
-  <div class="grid two" style="margin-top:16px">
-    <section class="card">
-      <h2>Progress Tahapan</h2>
-      <p class="desc">Persentase dibandingkan dengan Total Grid hasil perhitungan otomatis CSV.</p>
-      <div id="stages" class="list"></div>
-    </section>
-    <section class="card">
-      <h2>Progress Biostimulasi & Bioaugmentasi</h2>
-      <p class="desc">Persentase pelaksanaan Biostimulasi dan Bioaugmentasi dibandingkan dengan Total Grid.</p>
-      <div id="extra" class="list"></div>
-    </section>
-  </div>
-
-  <section class="card" style="margin-top:16px">
-    <h2>Parameter Initial TPC & Soil</h2>
-    <p class="desc">Persentase data Initial TPC dan Initial pH/Suhu/Kelembaban dibandingkan dengan Total Grid.</p>
-    <div id="initialSoil" class="list"></div>
-  </section>
-
-  <section class="card" style="margin-top:16px">
-    <h2>Detail Data TPH & Quality</h2>
-    <p class="desc">Data lengkap grid/subgrid yang diambil langsung dari Google Sheets CSV.</p>
-    <div class="tablewrap">
-      <table>
-        <thead>
-          <tr>
-            <th>No</th>
-            <th>ID Grid</th>
-            <th>Subgrid</th>
-            <th>Initial TPH</th>
-            <th>Initial Quality</th>
-            <th>T1</th>
-            <th>T2</th>
-            <th>T3</th>
-            <th>Last TPH</th>
-            <th>Progress Quality</th>
-            <th>Urea</th>
-            <th>TSP</th>
-            <th>Dolomit</th>
-            <th>Kohe</th>
-            <th>Bulking Agent</th>
-          </tr>
-        </thead>
-        <tbody id="body"></tbody>
-      </table>
-    </div>
-  </section>
-
-  <p class="note"><b>Catatan:</b> Seluruh data ditarik dan dikalkulasi secara otomatis langsung dari Google Sheets CSV.</p>
-</div>
-
 <script>
+// 1. URL CSV Data Utama
 const CSV_URLS = {
   "4D-26":  "https://docs.google.com/spreadsheets/d/e/2PACX-1vTcaC_R_TZJBD9yL4eYoIowjLHy-bu4-BiYfplv_LZdHoELcNenvx3xu1lBeAFedw/pub?gid=935726892&single=true&output=csv",
   "5B-41":  "https://docs.google.com/spreadsheets/d/e/2PACX-1vTcaC_R_TZJBD9yL4eYoIowjLHy-bu4-BiYfplv_LZdHoELcNenvx3xu1lBeAFedw/pub?gid=1215100269&single=true&output=csv",
   "5A-58B": "https://docs.google.com/spreadsheets/d/e/2PACX-1vTcaC_R_TZJBD9yL4eYoIowjLHy-bu4-BiYfplv_LZdHoELcNenvx3xu1lBeAFedw/pub?gid=418720547&single=true&output=csv",
   "5C-69B": "https://docs.google.com/spreadsheets/d/e/2PACX-1vTcaC_R_TZJBD9yL4eYoIowjLHy-bu4-BiYfplv_LZdHoELcNenvx3xu1lBeAFedw/pub?gid=1523187989&single=true&output=csv",
   "4E-21":  "https://docs.google.com/spreadsheets/d/e/2PACX-1vTcaC_R_TZJBD9yL4eYoIowjLHy-bu4-BiYfplv_LZdHoELcNenvx3xu1lBeAFedw/pub?gid=1531056312&single=true&output=csv",
-  "5B-88":  "https://docs.google.com/spreadsheets/d/e/2PACX-1vTcaC_R_TZJBD9yL4eYoIowjLHy-bu4-BiYfplv_LZdHoELcNenvx3xu1lBeAFedw/pub?gid=1245004392&single=true&output=csv",
-  "FOTO DRONE":  "https://docs.google.com/spreadsheets/d/e/2PACX-1vTcaC_R_TZJBD9yL4eYoIowjLHy-bu4-BiYfplv_LZdHoELcNenvx3xu1lBeAFedw/pub?gid=2008565642&single=true&output=csv"
+  "5B-88":  "https://docs.google.com/spreadsheets/d/e/2PACX-1vTcaC_R_TZJBD9yL4eYoIowjLHy-bu4-BiYfplv_LZdHoELcNenvx3xu1lBeAFedw/pub?gid=1245004392&single=true&output=csv"
 };
+
+// URL Khusus Sheet Foto Drone
+const DRONE_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTcaC_R_TZJBD9yL4eYoIowjLHy-bu4-BiYfplv_LZdHoELcNenvx3xu1lBeAFedw/pub?gid=2008565642&single=true&output=csv";
 
 const SHEETS = Object.keys(CSV_URLS);
 let selectedLoc = SHEETS[0];
@@ -221,6 +37,7 @@ function loadSheetData() {
   const statusEl = document.getElementById("syncStatus");
   statusEl.textContent = "⏳ Membaca data CSV untuk " + selectedLoc + "...";
 
+  // Load Data Kinerja Bioremediasi
   Papa.parse(CSV_URLS[selectedLoc], {
     download: true,
     header: false,
@@ -234,39 +51,93 @@ function loadSheetData() {
       statusEl.textContent = "❌ Gagal mengunduh CSV. Pastikan akses spreadsheet sudah publik.";
     }
   });
+
+  // Load Data Foto Drone secara Paralel
+  loadDronePhotos();
+}
+
+// Fungsi Khusus Membaca & Menampilkan Foto Drone
+function loadDronePhotos() {
+  const beforeContainer = document.getElementById("droneBefore");
+  const afterContainer = document.getElementById("droneAfter");
+
+  Papa.parse(DRONE_CSV_URL, {
+    download: true,
+    header: true,
+    skipEmptyLines: true,
+    complete: function(results) {
+      const rows = results.data;
+      
+      // Cari baris foto yang sesuai dengan lokasi terpilih
+      const targetRow = rows.find(r => {
+        const locName = Object.values(r)[0] ? String(Object.values(r)[0]).trim().toUpperCase() : "";
+        return locName === selectedLoc.toUpperCase() || locName.includes(selectedLoc.toUpperCase());
+      });
+
+      if (targetRow) {
+        // Ambil nilai kolom foto (mencakup fleksibilitas nama header kolom)
+        const keys = Object.keys(targetRow);
+        const beforeKey = keys.find(k => k.toUpperCase().includes("SEBELUM") || k.toUpperCase().includes("BEFORE")) || keys[1];
+        const afterKey = keys.find(k => k.toUpperCase().includes("SAAT") || k.toUpperCase().includes("PROG") || k.toUpperCase().includes("AFTER")) || keys[2];
+
+        const beforeUrl = formatImageUrl(targetRow[beforeKey]);
+        const afterUrl = formatImageUrl(targetRow[afterKey]);
+
+        beforeContainer.innerHTML = beforeUrl 
+          ? `<img src="${beforeUrl}" class="drone-photo" alt="Sebelum Pemulihan ${selectedLoc}">`
+          : `<div class="drone-empty">Foto Udara Sebelum Pemulihan Belum Tersedia (${selectedLoc})</div>`;
+
+        afterContainer.innerHTML = afterUrl 
+          ? `<img src="${afterUrl}" class="drone-photo" alt="Saat Pemulihan ${selectedLoc}">`
+          : `<div class="drone-empty">Foto Udara Saat Pemulihan Belum Tersedia (${selectedLoc})</div>`;
+      } else {
+        beforeContainer.innerHTML = `<div class="drone-empty">Foto Udara Sebelum Pemulihan (${selectedLoc})</div>`;
+        afterContainer.innerHTML = `<div class="drone-empty">Foto Udara Saat Pemulihan (${selectedLoc})</div>`;
+      }
+    },
+    error: function() {
+      beforeContainer.innerHTML = `<div class="drone-empty">Gagal Memuat Foto (${selectedLoc})</div>`;
+      afterContainer.innerHTML = `<div class="drone-empty">Gagal Memuat Foto (${selectedLoc})</div>`;
+    }
+  });
+}
+
+// Konversi Link Google Drive View menjadi Link Gambar Langsung
+function formatImageUrl(url) {
+  if (!url) return "";
+  let cleanUrl = String(url).trim();
+  if (cleanUrl.includes("drive.google.com") && cleanUrl.includes("/d/")) {
+    const fileId = cleanUrl.split("/d/")[1].split("/")[0];
+    return `https://drive.google.com/uc?export=view&id=${fileId}`;
+  }
+  return cleanUrl;
 }
 
 function processAndRender(rawRows) {
   if (!rawRows || rawRows.length < 7) return;
 
-// Tambahkan baris ini di paling atas processAndRender
-const combinedHeaders = rawRows[0] ? rawRows[0].map((_, colIndex) => {
-  return rawRows.slice(0, 6)
-    .map(row => String(row[colIndex] || "").trim())
-    .filter(Boolean)
-    .join(" ");
-}) : [];
-  
-  // 1. Ambil teks khusus baris ke-6 (index 5) dan baris ke-5 (index 4) untuk fleksibilitas
+  const combinedHeaders = rawRows[0] ? rawRows[0].map((_, colIndex) => {
+    return rawRows.slice(0, 6)
+      .map(row => String(row[colIndex] || "").trim())
+      .filter(Boolean)
+      .join(" ");
+  }) : [];
+    
   const subHeaders = rawRows[5] ? rawRows[5].map(v => String(v || "").trim().toUpperCase()) : [];
   const midHeaders = rawRows[4] ? rawRows[4].map(v => String(v || "").trim().toUpperCase()) : [];
 
-  // 2. Fungsi pencarian yang presisi
   const findExactCol = (exactKeywords, fallbackKeywords = []) => {
-    // Prioritas A: Cek baris 6 paling spesifik (misal: "INISIAL TPC", "INISIAL PH")
     let idx = subHeaders.findIndex(text => 
       exactKeywords.some(kw => text.replace(/[^A-Z0-9]/g, "") === kw.replace(/[^A-Z0-9]/g, ""))
     );
     if (idx !== -1) return idx;
 
-    // Prioritas B: Cek gabungan baris 5 & 6
     idx = combinedHeaders.findIndex(headerText => {
       const cleanHeader = headerText.replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
       return exactKeywords.some(kw => cleanHeader.includes(kw.replace(/[^a-zA-Z0-9]/g, "").toUpperCase()));
     });
     if (idx !== -1) return idx;
 
-    // Prioritas C: Fallback kata kunci umum jika belum ketemu
     if (fallbackKeywords.length > 0) {
       return combinedHeaders.findIndex(headerText => {
         const cleanHeader = headerText.replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
@@ -277,11 +148,10 @@ const combinedHeaders = rawRows[0] ? rawRows[0].map((_, colIndex) => {
     return -1;
   };
 
-  // 3. Eksekusi pemetaan kolom
   const idxGrid  = findExactCol(["GRIDID", "IDGRID", "GRID"]);
   const idxSub   = findExactCol(["SUBGRID", "SUB"]);
   const idxInit  = findExactCol(["INITIALTPH", "INISIALTPH"]);
-  const idxInitQ = findExactCol(["INITIALQUALITY", "QUALITYINITIAL", "INITQUALITY", "INITIALQLTY"]);
+  const idxInitQ = findExactCol(["INITIALQUALITY", "QUALITYINITIAL", "INITQUALITY", "INITIALQLTY", "QUALITY"]);
   const idxT1    = findExactCol(["T1"]);
   const idxT2    = findExactCol(["T2"]);
   const idxT3    = findExactCol(["T3"]);
@@ -290,7 +160,6 @@ const combinedHeaders = rawRows[0] ? rawRows[0].map((_, colIndex) => {
   const idxBioS  = findExactCol(["BIOSTIMULASI", "STIMULASI"]);
   const idxBioA  = findExactCol(["BIOAUGMENTASI", "AUGMENTASI"]);
 
-  // Pemisahan TPC dan Soil/pH secara pasti
   const idxTPC   = findExactCol(["INISIAL TPC", "INITIAL TPC", "INISIALTPC"], ["TPC"]);
   const idxSoil  = findExactCol(["INISIAL PH", "INITIAL PH", "INISIALPH", "SOIL", "SUHU", "KELEMBABAN"]);
 
@@ -372,9 +241,6 @@ const combinedHeaders = rawRows[0] ? rawRows[0].map((_, colIndex) => {
     <div class="card"><div class="label">Inisial TPC</div><div class="value">${cTPC}</div><div class="sub">${Math.round(cTPC/(totalGrid||1)*100)}% dari Total Grid</div></div>
     <div class="card"><div class="label">Inisial Soil</div><div class="value">${cSoil}</div><div class="sub">${Math.round(cSoil/(totalGrid||1)*100)}% dari Total Grid</div></div>
   `;
-
-  document.getElementById("droneBefore").innerHTML = `<div class="drone-empty">Foto Udara Sebelum Pemulihan (${selectedLoc})</div>`;
-  document.getElementById("droneAfter").innerHTML = `<div class="drone-empty">Foto Udara Saat Pemulihan (${selectedLoc})</div>`;
 
   renderTphChart([cT1, cT2, cT3, cLast]);
   document.getElementById("stats").innerHTML = `
@@ -521,5 +387,3 @@ function filterTable() {
 
 window.onload = init;
 </script>
-</body>
-</html>
