@@ -197,7 +197,6 @@ const CSV_URLS = {
 
 const SHEETS = Object.keys(CSV_URLS);
 let selectedLoc = SHEETS[0];
-let currentRawData = [];
 let chartInstances = {};
 
 function init() {
@@ -223,12 +222,11 @@ function loadSheetData() {
 
   Papa.parse(CSV_URLS[selectedLoc], {
     download: true,
-    header: true,
-    skipEmptyLines: true,
+    header: false, // Set false agar bisa akses spesifik baris
+    skipEmptyLines: false,
     complete: function(results) {
       statusEl.textContent = "✅ Data terhubung (" + selectedLoc + "): " + new Date().toLocaleTimeString();
-      currentRawData = results.data;
-      processAndRender(currentRawData);
+      processAndRender(results.data);
     },
     error: function(err) {
       console.error(err);
@@ -237,72 +235,104 @@ function loadSheetData() {
   });
 }
 
-function getKey(keys, keywords) {
-  return keys.find(k => keywords.some(kw => k.toUpperCase().includes(kw.toUpperCase())));
-}
+function processAndRender(rawRows) {
+  if (!rawRows || rawRows.length < 7) return;
 
-function processAndRender(rows) {
-  if (!rows || rows.length === 0) return;
-
-  const keys = Object.keys(rows[0]);
+  // Menggabungkan Baris 4, 5, dan 6 (index 3, 4, 5) untuk membentuk Header Kolom
+  const headerRows = [rawRows[3], rawRows[4], rawRows[5]];
+  const totalCols = rawRows[3] ? rawRows[3].length : 0;
   
-  const kGrid = getKey(keys, ["GRID ID", "ID GRID", "GRID"]);
-  const kSub = getKey(keys, ["SUBGRID", "SUB GRID", "SUB"]);
-  const kInit = getKey(keys, ["INITIAL TPH", "INITIAL", "INISIAL TPH"]);
-  const kInitQ = getKey(keys, ["INITIAL QUALITY", "QUALITY INITIAL"]);
-  const kT1 = getKey(keys, ["T1"]);
-  const kT2 = getKey(keys, ["T2"]);
-  const kT3 = getKey(keys, ["T3"]);
-  const kLast = getKey(keys, ["LAST TPH", "LAST"]);
-  const kProgQ = getKey(keys, ["PROGRESS QUALITY", "QUALITY PROGRESS"]);
-  const kBioS = getKey(keys, ["BIOSTIMULASI"]);
-  const kBioA = getKey(keys, ["BIOAUGMENTASI"]);
-  const kTPC = getKey(keys, ["TPC", "INITIAL TPC"]);
-  const kSoil = getKey(keys, ["PH", "SOIL", "INITIAL SOIL", "SUHU"]);
-  const kUrea = getKey(keys, ["UREA"]);
-  const kTSP = getKey(keys, ["TSP"]);
-  const kDolo = getKey(keys, ["DOLOMIT", "DOLOMITE"]);
-  const kKohe = getKey(keys, ["KOHE"]);
-  const kBulk = getKey(keys, ["BULKING", "BULKING AGENT"]);
+  const combinedHeaders = [];
+  for (let c = 0; c < totalCols; c++) {
+    let mergedText = "";
+    headerRows.forEach(row => {
+      if (row && row[c]) {
+        mergedText += " " + String(row[c]);
+      }
+    });
+    combinedHeaders.push(mergedText.trim());
+  }
 
-  const isValid = (val) => val !== null && val !== undefined && String(val).trim() !== "" && String(val).trim() !== "-";
+  // Pencarian posisi index kolom berdasarkan kata kunci gabungan
+  const findColIndex = (keywords) => {
+    return combinedHeaders.findIndex(headerText => {
+      const cleanHeader = headerText.replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
+      return keywords.some(kw => cleanHeader.includes(kw.replace(/[^a-zA-Z0-9]/g, "").toUpperCase()));
+    });
+  };
+
+  const idxGrid  = findColIndex(["GRIDID", "IDGRID", "GRID"]);
+  const idxSub   = findColIndex(["SUBGRID", "SUB"]);
+  const idxInit  = findColIndex(["INITIALTPH", "INISIALTPH", "INITIAL"]);
+  const idxInitQ = findColIndex(["INITIALQUALITY", "QUALITYINITIAL", "INITQUALITY"]);
+  const idxT1    = findColIndex(["T1"]);
+  const idxT2    = findColIndex(["T2"]);
+  const idxT3    = findColIndex(["T3"]);
+  const idxLast  = findColIndex(["LASTTPH", "LAST"]);
+  const idxProgQ = findColIndex(["PROGRESSQUALITY", "QUALITYPROGRESS", "PROGQUALITY"]);
+  const idxBioS  = findColIndex(["BIOSTIMULASI", "STIMULASI"]);
+  const idxBioA  = findColIndex(["BIOAUGMENTASI", "AUGMENTASI"]);
+  const idxTPC   = findColIndex(["TPC", "INITIALTPC"]);
+  const idxSoil  = findColIndex(["SOIL", "PH", "SUHU", "KELEMBABAN"]);
+  const idxUrea  = findColIndex(["UREA"]);
+  const idxTSP   = findColIndex(["TSP"]);
+  const idxDolo  = findColIndex(["DOLOMIT", "DOLOMITE"]);
+  const idxKohe  = findColIndex(["KOHE"]);
+  const idxBulk  = findColIndex(["BULKING", "BULKINGAGENT"]);
+
+  // Ambil baris data isi tabel (mulai dari baris ke-7 / index 6)
+  const dataRows = rawRows.slice(6);
+
+  const isValid = (val) => {
+    if (val === null || val === undefined) return false;
+    const str = String(val).trim().toUpperCase();
+    return str !== "" && str !== "-" && str !== "0" && str !== "FALSE" && str !== "N/A";
+  };
 
   let cInit = 0, cT1 = 0, cT2 = 0, cT3 = 0, cLast = 0, cBioS = 0, cBioA = 0, cTPC = 0, cSoil = 0;
   let initQ = { TKA: 0, TKB: 0, TKC: 0 };
   let progQ = { TKA: 0, TKB: 0, TKC: 0 };
   let matSum = { Urea: 0, TSP: 0, Dolomit: 0, Kohe: 0, Bulking: 0 };
 
-  rows.forEach(r => {
-    if (kInit && isValid(r[kInit])) cInit++;
-    if (kT1 && isValid(r[kT1])) cT1++;
-    if (kT2 && isValid(r[kT2])) cT2++;
-    if (kT3 && isValid(r[kT3])) cT3++;
-    if (kLast && isValid(r[kLast])) cLast++;
-    if (kBioS && isValid(r[kBioS])) cBioS++;
-    if (kBioA && isValid(r[kBioA])) cBioA++;
-    if (kTPC && isValid(r[kTPC])) cTPC++;
-    if (kSoil && isValid(r[kSoil])) cSoil++;
+  dataRows.forEach(r => {
+    if (idxGrid !== -1 && !r[idxGrid]) return; // Abaikan baris kosong tanpa Grid ID
 
-    if (kInitQ && r[kInitQ]) {
-      const q = String(r[kInitQ]).trim().toUpperCase();
+    if (idxInit !== -1 && isValid(r[idxInit])) cInit++;
+    if (idxT1 !== -1 && isValid(r[idxT1])) cT1++;
+    if (idxT2 !== -1 && isValid(r[idxT2])) cT2++;
+    if (idxT3 !== -1 && isValid(r[idxT3])) cT3++;
+    if (idxLast !== -1 && isValid(r[idxLast])) cLast++;
+    if (idxBioS !== -1 && isValid(r[idxBioS])) cBioS++;
+    if (idxBioA !== -1 && isValid(r[idxBioA])) cBioA++;
+    if (idxTPC !== -1 && isValid(r[idxTPC])) cTPC++;
+    if (idxSoil !== -1 && isValid(r[idxSoil])) cSoil++;
+
+    if (idxInitQ !== -1 && r[idxInitQ]) {
+      const q = String(r[idxInitQ]).trim().toUpperCase();
       if (initQ[q] !== undefined) initQ[q]++;
     }
-    if (kProgQ && r[kProgQ]) {
-      const q = String(r[kProgQ]).trim().toUpperCase();
+    if (idxProgQ !== -1 && r[idxProgQ]) {
+      const q = String(r[idxProgQ]).trim().toUpperCase();
       if (progQ[q] !== undefined) progQ[q]++;
     }
 
-    const parseNum = (v) => { const n = parseFloat(String(v).replace(",", ".")); return isNaN(n) ? 0 : n; };
-    if (kUrea) matSum.Urea += parseNum(r[kUrea]);
-    if (kTSP) matSum.TSP += parseNum(r[kTSP]);
-    if (kDolo) matSum.Dolomit += parseNum(r[kDolo]);
-    if (kKohe) matSum.Kohe += parseNum(r[kKohe]);
-    if (kBulk) matSum.Bulking += parseNum(r[kBulk]);
+    const parseNum = (v) => {
+      if (!v) return 0;
+      const n = parseFloat(String(v).replace(",", ".").replace(/[^0-9.]/g, ""));
+      return isNaN(n) ? 0 : n;
+    };
+
+    if (idxUrea !== -1) matSum.Urea += parseNum(r[idxUrea]);
+    if (idxTSP !== -1) matSum.TSP += parseNum(r[idxTSP]);
+    if (idxDolo !== -1) matSum.Dolomit += parseNum(r[idxDolo]);
+    if (idxKohe !== -1) matSum.Kohe += parseNum(r[idxKohe]);
+    if (idxBulk !== -1) matSum.Bulking += parseNum(r[idxBulk]);
   });
 
-  const totalGrid = rows.length;
+  const validDataRows = dataRows.filter(r => idxGrid !== -1 && r[idxGrid]);
+  const totalGrid = validDataRows.length;
 
-  // 1. KPI Cards
+  // Render KPIs
   document.getElementById("kpis").innerHTML = `
     <div class="card"><div class="label">Total Sub-Grid</div><div class="value">${totalGrid}</div><div class="sub">Total area lokasi</div></div>
     <div class="card"><div class="label">Inisial TPH</div><div class="value">${cInit}</div><div class="sub">${Math.round(cInit/(totalGrid||1)*100)}% dari Total Grid</div></div>
@@ -312,11 +342,11 @@ function processAndRender(rows) {
     <div class="card"><div class="label">Inisial Soil</div><div class="value">${cSoil}</div><div class="sub">${Math.round(cSoil/(totalGrid||1)*100)}% dari Total Grid</div></div>
   `;
 
-  // 2. Drone Empty Placeholders
+  // Render Drone
   document.getElementById("droneBefore").innerHTML = `<div class="drone-empty">Foto Udara Sebelum Pemulihan (${selectedLoc})</div>`;
   document.getElementById("droneAfter").innerHTML = `<div class="drone-empty">Foto Udara Saat Pemulihan (${selectedLoc})</div>`;
 
-  // 3. TPH Monitoring Chart
+  // Render Chart TPH
   renderTphChart([cT1, cT2, cT3, cLast]);
   document.getElementById("stats").innerHTML = `
     <div class="stat"><b>${cT1}</b><span>Monitoring T1</span></div>
@@ -326,10 +356,10 @@ function processAndRender(rows) {
     <div class="stat"><b>${totalGrid}</b><span>Total Sub-grid</span></div>
   `;
 
-  // 4. Quality Charts
+  // Render Quality Charts
   renderQualityCharts(initQ, progQ, totalGrid);
 
-  // 5. Biostimulasi Stats & Material
+  // Render Material
   document.getElementById("biostats").innerHTML = `
     <div class="bioitem"><b>${matSum.Urea.toLocaleString()}</b><span>Urea (kg)</span></div>
     <div class="bioitem"><b>${matSum.TSP.toLocaleString()}</b><span>TSP (kg)</span></div>
@@ -339,11 +369,13 @@ function processAndRender(rows) {
   `;
   renderMaterialChart(matSum);
 
-  // 6. Progress Lists
+  // Render Progress Lists
   renderProgressLists(cInit, cTPC, cSoil, cBioS, cBioA, totalGrid);
 
-  // 7. Render Table
-  renderTable(rows, { kGrid, kSub, kInit, kInitQ, kT1, kT2, kT3, kLast, kProgQ, kUrea, kTSP, kDolo, kKohe, kBulk });
+  // Render Tabel Detail
+  renderTableByIndex(validDataRows, {
+    idxGrid, idxSub, idxInit, idxInitQ, idxT1, idxT2, idxT3, idxLast, idxProgQ, idxUrea, idxTSP, idxDolo, idxKohe, idxBulk
+  });
 }
 
 function renderTphChart(dataCounts) {
@@ -415,7 +447,7 @@ function renderProgressLists(cInit, cTPC, cSoil, cBioS, cBioA, total) {
   `;
 }
 
-function renderTable(rows, map) {
+function renderTableByIndex(rows, idxs) {
   const tbody = document.getElementById("body");
   tbody.innerHTML = "";
 
@@ -428,24 +460,26 @@ function renderTable(rows, map) {
     return val;
   };
 
+  const getVal = (row, idx) => (idx !== -1 && row[idx]) ? row[idx] : "-";
+
   rows.forEach((r, idx) => {
     const tr = document.createElement("tr");
     tr.innerHTML = `
       <td>${idx + 1}</td>
-      <td>${r[map.kGrid] || "-"}</td>
-      <td>${r[map.kSub] || "-"}</td>
-      <td>${r[map.kInit] || "-"}</td>
-      <td>${getBadge(r[map.kInitQ])}</td>
-      <td>${r[map.kT1] || "-"}</td>
-      <td>${r[map.kT2] || "-"}</td>
-      <td>${r[map.kT3] || "-"}</td>
-      <td>${r[map.kLast] || "-"}</td>
-      <td>${getBadge(r[map.kProgQ])}</td>
-      <td>${r[map.kUrea] || "-"}</td>
-      <td>${r[map.kTSP] || "-"}</td>
-      <td>${r[map.kDolo] || "-"}</td>
-      <td>${r[map.kKohe] || "-"}</td>
-      <td>${r[map.kBulk] || "-"}</td>
+      <td>${getVal(r, idxs.idxGrid)}</td>
+      <td>${getVal(r, idxs.idxSub)}</td>
+      <td>${getVal(r, idxs.idxInit)}</td>
+      <td>${getBadge(getVal(r, idxs.idxInitQ))}</td>
+      <td>${getVal(r, idxs.idxT1)}</td>
+      <td>${getVal(r, idxs.idxT2)}</td>
+      <td>${getVal(r, idxs.idxT3)}</td>
+      <td>${getVal(r, idxs.idxLast)}</td>
+      <td>${getBadge(getVal(r, idxs.idxProgQ))}</td>
+      <td>${getVal(r, idxs.idxUrea)}</td>
+      <td>${getVal(r, idxs.idxTSP)}</td>
+      <td>${getVal(r, idxs.idxDolo)}</td>
+      <td>${getVal(r, idxs.idxKohe)}</td>
+      <td>${getVal(r, idxs.idxBulk)}</td>
     `;
     tbody.appendChild(tr);
   });
