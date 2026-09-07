@@ -222,7 +222,7 @@ function loadSheetData() {
 
   Papa.parse(CSV_URLS[selectedLoc], {
     download: true,
-    header: false, // Set false agar bisa akses spesifik baris
+    header: false,
     skipEmptyLines: false,
     complete: function(results) {
       statusEl.textContent = "✅ Data terhubung (" + selectedLoc + "): " + new Date().toLocaleTimeString();
@@ -238,7 +238,7 @@ function loadSheetData() {
 function processAndRender(rawRows) {
   if (!rawRows || rawRows.length < 7) return;
 
-  // Menggabungkan Baris 4, 5, dan 6 (index 3, 4, 5) untuk membentuk Header Kolom
+  // Gabungkan Baris 4, 5, dan 6 (index 3, 4, 5) untuk Header Kolom
   const headerRows = [rawRows[3], rawRows[4], rawRows[5]];
   const totalCols = rawRows[3] ? rawRows[3].length : 0;
   
@@ -253,7 +253,6 @@ function processAndRender(rawRows) {
     combinedHeaders.push(mergedText.trim());
   }
 
-  // Pencarian posisi index kolom berdasarkan kata kunci gabungan
   const findColIndex = (keywords) => {
     return combinedHeaders.findIndex(headerText => {
       const cleanHeader = headerText.replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
@@ -280,8 +279,28 @@ function processAndRender(rawRows) {
   const idxKohe  = findColIndex(["KOHE"]);
   const idxBulk  = findColIndex(["BULKING", "BULKINGAGENT"]);
 
-  // Ambil baris data isi tabel (mulai dari baris ke-7 / index 6)
-  const dataRows = rawRows.slice(6);
+  // Ambil data mulai dari baris ke-7 (index 6)
+  const rawDataSlice = rawRows.slice(6);
+  const dataRows = [];
+
+  // Filter khusus: Potong data SEBELUM baris 'TOTAL' & abaikan baris kosong
+  for (let i = 0; i < rawDataSlice.length; i++) {
+    const row = rawDataSlice[i];
+    
+    // Cek seluruh isi sel dalam satu baris untuk kata 'TOTAL'
+    const rowText = row.join(" ").toUpperCase();
+    if (rowText.includes("TOTAL")) {
+      break; // Stop pembacaan data begitu ketemu kata TOTAL
+    }
+
+    // Pastikan baris memiliki ID Grid atau Subgrid yang valid
+    const gridVal = idxGrid !== -1 ? String(row[idxGrid] || "").trim() : "";
+    const subVal = idxSub !== -1 ? String(row[idxSub] || "").trim() : "";
+
+    if (gridVal !== "" || subVal !== "") {
+      dataRows.push(row);
+    }
+  }
 
   const isValid = (val) => {
     if (val === null || val === undefined) return false;
@@ -295,8 +314,6 @@ function processAndRender(rawRows) {
   let matSum = { Urea: 0, TSP: 0, Dolomit: 0, Kohe: 0, Bulking: 0 };
 
   dataRows.forEach(r => {
-    if (idxGrid !== -1 && !r[idxGrid]) return; // Abaikan baris kosong tanpa Grid ID
-
     if (idxInit !== -1 && isValid(r[idxInit])) cInit++;
     if (idxT1 !== -1 && isValid(r[idxT1])) cT1++;
     if (idxT2 !== -1 && isValid(r[idxT2])) cT2++;
@@ -329,8 +346,7 @@ function processAndRender(rawRows) {
     if (idxBulk !== -1) matSum.Bulking += parseNum(r[idxBulk]);
   });
 
-  const validDataRows = dataRows.filter(r => idxGrid !== -1 && r[idxGrid]);
-  const totalGrid = validDataRows.length;
+  const totalGrid = dataRows.length;
 
   // Render KPIs
   document.getElementById("kpis").innerHTML = `
@@ -356,7 +372,7 @@ function processAndRender(rawRows) {
     <div class="stat"><b>${totalGrid}</b><span>Total Sub-grid</span></div>
   `;
 
-  // Render Quality Charts
+  // Render Quality
   renderQualityCharts(initQ, progQ, totalGrid);
 
   // Render Material
@@ -369,11 +385,11 @@ function processAndRender(rawRows) {
   `;
   renderMaterialChart(matSum);
 
-  // Render Progress Lists
+  // Render Progress
   renderProgressLists(cInit, cTPC, cSoil, cBioS, cBioA, totalGrid);
 
   // Render Tabel Detail
-  renderTableByIndex(validDataRows, {
+  renderTableByIndex(dataRows, {
     idxGrid, idxSub, idxInit, idxInitQ, idxT1, idxT2, idxT3, idxLast, idxProgQ, idxUrea, idxTSP, idxDolo, idxKohe, idxBulk
   });
 }
