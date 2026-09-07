@@ -63,14 +63,14 @@ th{position:sticky;top:0;background:#f7f9fb;z-index:2}
 .drone-panel{border:1px solid #e3e8ef;border-radius:12px;padding:12px;background:#fbfcfe}
 .drone-panel h3{margin:0 0 10px}
 .drone-photo{width:100%;height:330px;object-fit:contain;background:#eef2f6;border-radius:10px;display:block}
-.drone-empty{height:330px;display:flex;align-items:center;justify-content:center;color:#687487;background:#eef2f6;border-radius:10px;font-size:13px}
+.drone-empty{height:330px;display:flex;align-items:center;justify-content:center;color:#687487;background:#eef2f6;border-radius:10px;font-size:13px;text-align:center;padding:15px}
 @media(max-width:800px){.quality-charts,.drone-grid{grid-template-columns:1fr}.quality-chart{height:230px}.drone-photo,.drone-empty{height:250px}}
 </style>
 </head>
 <body>
 <header>
   <h1>Dashboard Site Remediation</h1>
-  <p>Monitoring TPH •  Monitoring Soil • Biostimulasi • Bioaugmentasi • TPC</p>
+  <p>Monitoring TPH • Monitoring Soil • Biostimulasi • Bioaugmentasi • TPC</p>
 </header>
 <div class="wrap">
   <div class="controls">
@@ -186,15 +186,18 @@ th{position:sticky;top:0;background:#f7f9fb;z-index:2}
 </div>
 
 <script>
+// 1. URL CSV Data Lokasi
 const CSV_URLS = {
   "4D-26":  "https://docs.google.com/spreadsheets/d/e/2PACX-1vTcaC_R_TZJBD9yL4eYoIowjLHy-bu4-BiYfplv_LZdHoELcNenvx3xu1lBeAFedw/pub?gid=935726892&single=true&output=csv",
   "5B-41":  "https://docs.google.com/spreadsheets/d/e/2PACX-1vTcaC_R_TZJBD9yL4eYoIowjLHy-bu4-BiYfplv_LZdHoELcNenvx3xu1lBeAFedw/pub?gid=1215100269&single=true&output=csv",
   "5A-58B": "https://docs.google.com/spreadsheets/d/e/2PACX-1vTcaC_R_TZJBD9yL4eYoIowjLHy-bu4-BiYfplv_LZdHoELcNenvx3xu1lBeAFedw/pub?gid=418720547&single=true&output=csv",
   "5C-69B": "https://docs.google.com/spreadsheets/d/e/2PACX-1vTcaC_R_TZJBD9yL4eYoIowjLHy-bu4-BiYfplv_LZdHoELcNenvx3xu1lBeAFedw/pub?gid=1523187989&single=true&output=csv",
   "4E-21":  "https://docs.google.com/spreadsheets/d/e/2PACX-1vTcaC_R_TZJBD9yL4eYoIowjLHy-bu4-BiYfplv_LZdHoELcNenvx3xu1lBeAFedw/pub?gid=1531056312&single=true&output=csv",
-  "5B-88":  "https://docs.google.com/spreadsheets/d/e/2PACX-1vTcaC_R_TZJBD9yL4eYoIowjLHy-bu4-BiYfplv_LZdHoELcNenvx3xu1lBeAFedw/pub?gid=1245004392&single=true&output=csv",
-  "FOTO DRONE":  "https://docs.google.com/spreadsheets/d/e/2PACX-1vTcaC_R_TZJBD9yL4eYoIowjLHy-bu4-BiYfplv_LZdHoELcNenvx3xu1lBeAFedw/pub?gid=2008565642&single=true&output=csv"
+  "5B-88":  "https://docs.google.com/spreadsheets/d/e/2PACX-1vTcaC_R_TZJBD9yL4eYoIowjLHy-bu4-BiYfplv_LZdHoELcNenvx3xu1lBeAFedw/pub?gid=1245004392&single=true&output=csv"
 };
+
+// 2. URL Khusus Sheet Foto Drone (Dipisah dari dropdown utama)
+const DRONE_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTcaC_R_TZJBD9yL4eYoIowjLHy-bu4-BiYfplv_LZdHoELcNenvx3xu1lBeAFedw/pub?gid=2008565642&single=true&output=csv";
 
 const SHEETS = Object.keys(CSV_URLS);
 let selectedLoc = SHEETS[0];
@@ -221,6 +224,7 @@ function loadSheetData() {
   const statusEl = document.getElementById("syncStatus");
   statusEl.textContent = "⏳ Membaca data CSV untuk " + selectedLoc + "...";
 
+  // Memuat data tabular utama
   Papa.parse(CSV_URLS[selectedLoc], {
     download: true,
     header: false,
@@ -234,39 +238,116 @@ function loadSheetData() {
       statusEl.textContent = "❌ Gagal mengunduh CSV. Pastikan akses spreadsheet sudah publik.";
     }
   });
+
+  // Memuat data Foto Drone secara terpisah
+  loadDronePhotos();
+}
+
+// Fungsi Pembuat Tampilan Foto Drone
+function loadDronePhotos() {
+  const beforeContainer = document.getElementById("droneBefore");
+  const afterContainer = document.getElementById("droneAfter");
+
+  beforeContainer.innerHTML = `<div class="drone-empty">⏳ Memuat Foto Sebelum...</div>`;
+  afterContainer.innerHTML = `<div class="drone-empty">⏳ Memuat Foto Saat Pemulihan...</div>`;
+
+  Papa.parse(DRONE_CSV_URL, {
+    download: true,
+    header: false,
+    skipEmptyLines: true,
+    complete: function(results) {
+      const rows = results.data;
+      if (!rows || rows.length === 0) {
+        showEmptyDrone("Data sheet FOTO DRONE kosong");
+        return;
+      }
+
+      // Cari baris yang mencantumkan lokasi terpilih (contoh: '4D-26')
+      const targetRow = rows.find(row => {
+        return row.some(cell => {
+          const val = String(cell || "").trim().toUpperCase();
+          return val === selectedLoc.toUpperCase() || val.includes(selectedLoc.toUpperCase());
+        });
+      });
+
+      if (targetRow) {
+        // Ambil sel/kolom yang berisi URL/Link HTTP
+        const linkCells = targetRow.filter(cell => {
+          const val = String(cell || "").trim();
+          return val.startsWith("http://") || val.startsWith("https://") || val.includes("drive.google.com");
+        });
+
+        const beforeUrl = formatImageUrl(linkCells[0]);
+        const afterUrl = formatImageUrl(linkCells[1]);
+
+        beforeContainer.innerHTML = beforeUrl 
+          ? `<img src="${beforeUrl}" class="drone-photo" alt="Sebelum Pemulihan ${selectedLoc}" onerror="this.outerHTML='<div class=\\'drone-empty\\'>Gagal memuat gambar.<br>Pastikan izin berbagi Google Drive diset ke PUBLIC.</div>'">`
+          : `<div class="drone-empty">Foto Udara Sebelum Pemulihan Belum Tersedia (${selectedLoc})</div>`;
+
+        afterContainer.innerHTML = afterUrl 
+          ? `<img src="${afterUrl}" class="drone-photo" alt="Saat Pemulihan ${selectedLoc}" onerror="this.outerHTML='<div class=\\'drone-empty\\'>Gagal memuat gambar.<br>Pastikan izin berbagi Google Drive diset ke PUBLIC.</div>'">`
+          : `<div class="drone-empty">Foto Udara Saat Pemulihan Belum Tersedia (${selectedLoc})</div>`;
+      } else {
+        showEmptyDrone(`Foto Udara (${selectedLoc}) Belum Terdaftar di Sheet FOTO DRONE`);
+      }
+    },
+    error: function(err) {
+      console.error(err);
+      showEmptyDrone(`Gagal Mengambil Data CSV Foto (${selectedLoc})`);
+    }
+  });
+}
+
+function showEmptyDrone(msg) {
+  document.getElementById("droneBefore").innerHTML = `<div class="drone-empty">${msg}</div>`;
+  document.getElementById("droneAfter").innerHTML = `<div class="drone-empty">${msg}</div>`;
+}
+
+// Parser URL Google Drive agar bisa dirender sebagai Gambar
+function formatImageUrl(url) {
+  if (!url) return "";
+  let cleanUrl = String(url).trim();
+
+  if (cleanUrl.includes("drive.google.com")) {
+    let fileId = "";
+    if (cleanUrl.includes("/d/")) {
+      fileId = cleanUrl.split("/d/")[1].split("/")[0].split("?")[0];
+    } else if (cleanUrl.includes("id=")) {
+      fileId = cleanUrl.split("id=")[1].split("&")[0];
+    }
+
+    if (fileId) {
+      return `https://lh3.googleusercontent.com/d/${fileId}=s1000`;
+    }
+  }
+  return cleanUrl;
 }
 
 function processAndRender(rawRows) {
   if (!rawRows || rawRows.length < 7) return;
 
-// Tambahkan baris ini di paling atas processAndRender
-const combinedHeaders = rawRows[0] ? rawRows[0].map((_, colIndex) => {
-  return rawRows.slice(0, 6)
-    .map(row => String(row[colIndex] || "").trim())
-    .filter(Boolean)
-    .join(" ");
-}) : [];
-  
-  // 1. Ambil teks khusus baris ke-6 (index 5) dan baris ke-5 (index 4) untuk fleksibilitas
+  const combinedHeaders = rawRows[0] ? rawRows[0].map((_, colIndex) => {
+    return rawRows.slice(0, 6)
+      .map(row => String(row[colIndex] || "").trim())
+      .filter(Boolean)
+      .join(" ");
+  }) : [];
+    
   const subHeaders = rawRows[5] ? rawRows[5].map(v => String(v || "").trim().toUpperCase()) : [];
   const midHeaders = rawRows[4] ? rawRows[4].map(v => String(v || "").trim().toUpperCase()) : [];
 
-  // 2. Fungsi pencarian yang presisi
   const findExactCol = (exactKeywords, fallbackKeywords = []) => {
-    // Prioritas A: Cek baris 6 paling spesifik (misal: "INISIAL TPC", "INISIAL PH")
     let idx = subHeaders.findIndex(text => 
       exactKeywords.some(kw => text.replace(/[^A-Z0-9]/g, "") === kw.replace(/[^A-Z0-9]/g, ""))
     );
     if (idx !== -1) return idx;
 
-    // Prioritas B: Cek gabungan baris 5 & 6
     idx = combinedHeaders.findIndex(headerText => {
       const cleanHeader = headerText.replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
       return exactKeywords.some(kw => cleanHeader.includes(kw.replace(/[^a-zA-Z0-9]/g, "").toUpperCase()));
     });
     if (idx !== -1) return idx;
 
-    // Prioritas C: Fallback kata kunci umum jika belum ketemu
     if (fallbackKeywords.length > 0) {
       return combinedHeaders.findIndex(headerText => {
         const cleanHeader = headerText.replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
@@ -277,7 +358,6 @@ const combinedHeaders = rawRows[0] ? rawRows[0].map((_, colIndex) => {
     return -1;
   };
 
-  // 3. Eksekusi pemetaan kolom
   const idxGrid  = findExactCol(["GRIDID", "IDGRID", "GRID"]);
   const idxSub   = findExactCol(["SUBGRID", "SUB"]);
   const idxInit  = findExactCol(["INITIALTPH", "INISIALTPH"]);
@@ -290,7 +370,6 @@ const combinedHeaders = rawRows[0] ? rawRows[0].map((_, colIndex) => {
   const idxBioS  = findExactCol(["BIOSTIMULASI", "STIMULASI"]);
   const idxBioA  = findExactCol(["BIOAUGMENTASI", "AUGMENTASI"]);
 
-  // Pemisahan TPC dan Soil/pH secara pasti
   const idxTPC   = findExactCol(["INISIAL TPC", "INITIAL TPC", "INISIALTPC"], ["TPC"]);
   const idxSoil  = findExactCol(["INISIAL PH", "INITIAL PH", "INISIALPH", "SOIL", "SUHU", "KELEMBABAN"]);
 
@@ -372,9 +451,6 @@ const combinedHeaders = rawRows[0] ? rawRows[0].map((_, colIndex) => {
     <div class="card"><div class="label">Inisial TPC</div><div class="value">${cTPC}</div><div class="sub">${Math.round(cTPC/(totalGrid||1)*100)}% dari Total Grid</div></div>
     <div class="card"><div class="label">Inisial Soil</div><div class="value">${cSoil}</div><div class="sub">${Math.round(cSoil/(totalGrid||1)*100)}% dari Total Grid</div></div>
   `;
-
-  document.getElementById("droneBefore").innerHTML = `<div class="drone-empty">Foto Udara Sebelum Pemulihan (${selectedLoc})</div>`;
-  document.getElementById("droneAfter").innerHTML = `<div class="drone-empty">Foto Udara Saat Pemulihan (${selectedLoc})</div>`;
 
   renderTphChart([cT1, cT2, cT3, cLast]);
   document.getElementById("stats").innerHTML = `
