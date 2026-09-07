@@ -70,7 +70,7 @@ th{position:sticky;top:0;background:#f7f9fb;z-index:2}
 <body>
 <header>
   <h1>Dashboard Site Remediation</h1>
-  <p>Monitoring TPH • Initial PH/Suhu/Kelembaban • Biostimulasi • Bioaugmentasi • TPC • Quality</p>
+  <p>Monitoring TPH •  Monitoring Soil • Biostimulasi • Bioaugmentasi • TPC</p>
 </header>
 <div class="wrap">
   <div class="controls">
@@ -280,12 +280,12 @@ const combinedHeaders = rawRows[0] ? rawRows[0].map((_, colIndex) => {
   const idxGrid  = findExactCol(["GRIDID", "IDGRID", "GRID"]);
   const idxSub   = findExactCol(["SUBGRID", "SUB"]);
   const idxInit  = findExactCol(["INITIALTPH", "INISIALTPH"]);
-  const idxInitQ = findExactCol(["INITIALQUALITY", "QUALITYINITIAL", "INITQUALITY"]);
+  const idxInitQ = findExactCol(["INITIALQUALITY", "QUALITYINITIAL", "INITQUALITY", "INITIALQLTY"]);
   const idxT1    = findExactCol(["T1"]);
   const idxT2    = findExactCol(["T2"]);
   const idxT3    = findExactCol(["T3"]);
   const idxLast  = findExactCol(["LASTTPH", "LAST"]);
-  const idxProgQ = findExactCol(["PROGRESSQUALITY", "QUALITYPROGRESS", "PROGQUALITY"]);
+  const idxProgQ = findExactCol(["PROGRESSQUALITY", "QUALITYPROGRESS", "PROGQUALITY", "LAST QLTY"]);
   const idxBioS  = findExactCol(["BIOSTIMULASI", "STIMULASI"]);
   const idxBioA  = findExactCol(["BIOAUGMENTASI", "AUGMENTASI"]);
 
