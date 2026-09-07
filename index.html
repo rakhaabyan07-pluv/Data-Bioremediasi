@@ -4,7 +4,10 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Dashboard Lokasi Bioremediasi</title>
+<!-- Chart.js -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<!-- PapaParse untuk membaca CSV -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 <style>
 *{box-sizing:border-box}
 body{margin:0;background:#f3f6fa;color:#172033;font-family:Segoe UI,Arial,sans-serif}
@@ -13,147 +16,56 @@ header h1{margin:0 0 5px}
 header p{margin:0;opacity:.86}
 .wrap{max-width:1500px;margin:auto;padding:20px}
 .controls{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:17px}
-select,input{border:1px solid #dce3eb;border-radius:10px;padding:10px 12px;background:#fff;font-size:14px}
-select{min-width:220px}
-input{flex:1;min-width:250px}
+select{border:1px solid #dce3eb;border-radius:10px;padding:10px 12px;background:#fff;font-size:14px;min-width:220px}
 .grid{display:grid;gap:16px}
-.kpis{grid-template-columns:repeat(6,1fr)}
-.two{grid-template-columns:1.35fr 1fr}
+.kpis{grid-template-columns:repeat(5,1fr)}
 .card{background:#fff;border:1px solid #e1e7ee;border-radius:15px;padding:18px;box-shadow:0 4px 15px rgba(20,40,70,.05)}
 .label{font-size:11px;color:#687487;text-transform:uppercase}
 .value{font-size:28px;font-weight:800;margin:5px 0}
-.sub,.desc,.note{font-size:12px;color:#687487;line-height:1.5}
+.sub,.desc{font-size:12px;color:#687487;line-height:1.5}
 h2{font-size:17px;margin:0 0 5px}
-h3{font-size:13px;margin:16px 0 8px}
 .chart{height:300px;margin-top:10px;position:relative}
-.stats{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-top:12px}
-.stat{padding:11px 7px;background:#f8fafc;border:1px solid #e5eaf0;border-radius:10px;text-align:center}
-.stat b{font-size:19px;display:block}
-.stat span{font-size:10px;color:#687487}
-.list{display:grid;gap:8px}
-.r{display:grid;grid-template-columns:135px 1fr 60px;gap:9px;align-items:center;font-size:12px}
-.bar{height:9px;background:#edf1f5;border-radius:20px;overflow:hidden}
-.bar i{display:block;height:100%;background:#1c6da4}
-.bio-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:9px;margin-top:13px}
-.bioitem{background:#f8fafc;border:1px solid #e4e9ef;border-radius:10px;padding:10px;text-align:center}
-.bioitem b{display:block;font-size:17px}
-.bioitem span{font-size:10px;color:#687487}
-.tablewrap{max-height:600px;overflow:auto;border:1px solid #e1e6ed;border-radius:10px}
-table{width:100%;border-collapse:collapse;font-size:12px}
-th,td{padding:8px 7px;border-bottom:1px solid #e7ebf0;white-space:nowrap;text-align:left}
-th{position:sticky;top:0;background:#f7f9fb;z-index:2}
-@media(max-width:1100px){.kpis{grid-template-columns:repeat(3,1fr)}.two{grid-template-columns:1fr}.bio-grid{grid-template-columns:repeat(3,1fr)}}
-@media(max-width:650px){.kpis{grid-template-columns:repeat(2,1fr)}.stats,.bio-grid{grid-template-columns:repeat(2,1fr)}}
-.quality-card{min-height:100%}
-.quality-charts{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:14px}
-.quality-panel{border:1px solid #e5eaf0;border-radius:12px;padding:14px;background:#fbfcfe}
-.quality-panel h3{margin:0 0 4px;font-size:14px}
-.quality-explain{margin:0;color:#687487;font-size:11px;line-height:1.5;min-height:30px}
-.quality-chart{height:200px;margin:4px 0 8px;position:relative}
-.drone-card{margin-top:16px}
-.drone-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:14px}
-.drone-panel{border:1px solid #e3e8ef;border-radius:12px;padding:12px;background:#fbfcfe}
-.drone-panel h3{margin:0 0 10px}
-.drone-empty{height:250px;display:flex;align-items:center;justify-content:center;color:#687487;background:#eef2f6;border-radius:10px;font-size:13px}
+@media(max-width:900px){.kpis{grid-template-columns:repeat(2,1fr)}}
 </style>
 </head>
 <body>
 <header>
   <h1>Dashboard Site Remediation</h1>
-  <p>Monitoring TPH • Initial PH/Suhu/Kelembaban • Biostimulasi • Bioaugmentasi • TPC • Quality</p>
+  <p>Monitoring TPH • Real-Time Fetch dari Publikasi CSV Google Sheets</p>
 </header>
 <div class="wrap">
   <div class="controls">
     <b>Pilih Lokasi:</b>
     <select id="loc"></select>
-    <input id="search" placeholder="Cari ID Grid, Subgrid...">
-    <button id="refreshBtn" style="border:0;border-radius:10px;padding:10px 14px;background:#12385e;color:#fff;font-weight:700;cursor:pointer">🔄 Update Data</button>
-    <span id="syncStatus" style="font-size:13px;color:#52606d">Menggunakan data spreadsheet terbaru</span>
+    <button id="refreshBtn" onclick="loadSheetData()" style="border:0;border-radius:10px;padding:10px 14px;background:#12385e;color:#fff;font-weight:700;cursor:pointer">🔄 Update Data</button>
+    <span id="syncStatus" style="font-size:13px;color:#52606d">Memuat data CSV...</span>
   </div>
 
   <div id="kpis" class="grid kpis"></div>
 
-  <section class="card drone-card">
-    <h2>Foto Udara Lokasi</h2>
-    <p class="desc">Perbandingan kondisi lokasi <b>sebelum pemulihan</b> dan <b>saat pemulihan</b> berdasarkan data sheet <b>FOTO DRONE</b>.</p>
-    <div class="drone-grid">
-      <div class="drone-panel">
-        <h3>SEBELUM PEMULIHAN</h3>
-        <div id="droneBefore"></div>
-      </div>
-      <div class="drone-panel">
-        <h3>SAAT PEMULIHAN</h3>
-        <div id="droneAfter"></div>
-      </div>
-    </div>
-  </section>
-
-  <div class="grid two" style="margin-top:16px">
-    <section class="card">
-      <h2>Monitoring TPH — T1, T2, T3 & Last TPH</h2>
-      <p class="desc">Jumlah <b>grid yang sudah memiliki data monitoring TPH</b> pada setiap tahapan.</p>
-      <div class="chart"><canvas id="tphChart"></canvas></div>
-    </section>
-
-    <section class="card quality-card">
-      <h2>Quality TPH — Initial vs Progress</h2>
-      <p class="desc">Diagram menunjukkan <b>komposisi kualitas TPH</b> berdasarkan status <b>TKA, TKB, dan TKC</b>.</p>
-      <div class="quality-charts">
-        <div class="quality-panel">
-          <h3>Initial TPH — Quality</h3>
-          <p class="quality-explain">Jumlah grid berdasarkan status kualitas awal (Initial TPH).</p>
-          <div class="quality-chart"><canvas id="qualInitialChart"></canvas></div>
-        </div>
-        <div class="quality-panel">
-          <h3>Progress TPH — Quality</h3>
-          <p class="quality-explain">Jumlah grid berdasarkan status kualitas progress/terakhir.</p>
-          <div class="quality-chart"><canvas id="qualProgressChart"></canvas></div>
-        </div>
-      </div>
-    </section>
-  </div>
-
   <section class="card" style="margin-top:16px">
-    <h2>Biostimulasi — Rekap & Material</h2>
-    <p class="desc">Jumlah Biostimulasi utama dan rincian pemakaian material Urea, TSP, Dolomit, Kohe, dan Bulking Agent.</p>
-    <div class="chart" style="height:250px"><canvas id="matChart"></canvas></div>
-  </section>
-
-  <div class="grid two" style="margin-top:16px">
-    <section class="card">
-      <h2>Progress Tahapan</h2>
-      <p class="desc">Persentase dibandingkan dengan Total Grid resmi pada REKAP.</p>
-      <div id="stages" class="list"></div>
-    </section>
-    <section class="card">
-      <h2>Progress Biostimulasi & Bioaugmentasi</h2>
-      <p class="desc">Persentase pelaksanaan Biostimulasi dan Bioaugmentasi dibandingkan dengan Total Grid.</p>
-      <div id="extra" class="list"></div>
-    </section>
-  </div>
-
-  <section class="card" style="margin-top:16px">
-    <h2>Parameter Initial TPC & Soil</h2>
-    <p class="desc">Persentase data Initial TPC dan Initial pH/Suhu/Kelembaban dibandingkan dengan Total Grid.</p>
-    <div id="initialSoil" class="list"></div>
+    <h2>Monitoring TPH — T1, T2, T3 & Last TPH</h2>
+    <p class="desc">Jumlah <b>grid ter-monitoring</b> dihitung otomatis dari baris yang terisi pada file CSV Google Sheets.</p>
+    <div class="chart"><canvas id="tphChart"></canvas></div>
   </section>
 </div>
 
 <script>
-const SHEETS = ["4D-26", "5B-41", "5A-58B", "5C-69B", "4E-21", "5B-88"];
-
-const REKAP_DATA = {
-  // tphGridCounts: [Jumlah Grid T1, T2, T3, Last TPH]
-  "4D-26":  { totalGrid: 7,   initialTPH: 7,   initialTPC: 7,   initialSoil: 7,   biostimulasi: 7,   bioaugmentasi: 4,   tphGridCounts: [7, 7, 5, 4], qualityInit: [5, 2, 0], qualityProg: [1, 2, 4], material: [120, 80, 50, 200, 150] },
-  "5B-41":  { totalGrid: 296, initialTPH: 189, initialTPC: 295, initialSoil: 296, biostimulasi: 290, bioaugmentasi: 206, tphGridCounts: [189, 150, 100, 75], qualityInit: [120, 50, 19], qualityProg: [40, 60, 190], material: [500, 350, 200, 800, 600] },
-  "5A-58B": { totalGrid: 27,  initialTPH: 27,  initialTPC: 27,  initialSoil: 27,  biostimulasi: 27,  bioaugmentasi: 27,  tphGridCounts: [27, 27, 20, 15], qualityInit: [20, 7, 0], qualityProg: [2, 5, 20], material: [200, 150, 100, 300, 250] },
-  "5C-69B": { totalGrid: 19,  initialTPH: 19,  initialTPC: 19,  initialSoil: 19,  biostimulasi: 19,  bioaugmentasi: 19,  tphGridCounts: [19, 18, 15, 10], qualityInit: [15, 4, 0], qualityProg: [0, 2, 17], material: [150, 100, 80, 250, 180] },
-  "4E-21":  { totalGrid: 38,  initialTPH: 19,  initialTPC: 19,  initialSoil: 12,  biostimulasi: 12,  bioaugmentasi: 12,  tphGridCounts: [19, 15, 10, 8], qualityInit: [12, 7, 0], qualityProg: [3, 4, 12], material: [100, 70, 40, 150, 100] },
-  "5B-88":  { totalGrid: 5,   initialTPH: 5,   initialTPC: 4,   initialSoil: 4,   biostimulasi: 4,   bioaugmentasi: 0,   tphGridCounts: [5, 4, 2, 1], qualityInit: [4, 1, 0], qualityProg: [1, 1, 3], material: [40, 30, 20, 60, 50] }
+// DAFTAR LINK CSV UNTUK TIAP SHEET
+// Ganti URL di bawah ini dengan URL publikasi CSV dari masing-masing sheet kamu
+// Gantilah bagian ini dengan URL CSV asli dari tiap-tiap sheet di Google Sheets Anda:
+const CSV_URLS = {
+  "4D-26":  "https://docs.google.com/spreadsheets/d/e/2PACX-1vTcaC_R_TZJBD9yL4eYoIowjLHy-bu4-BiYfplv_LZdHoELcNenvx3xu1lBeAFedw/pub?gid=0&single=true&output=csv",
+  "5B-41":  "https://docs.google.com/spreadsheets/d/e/2PACX-1vTcaC_R_TZJBD9yL4eYoIowjLHy-bu4-BiYfplv_LZdHoELcNenvx3xu1lBeAFedw/pub?gid=GID_UNTUK_5B_41&single=true&output=csv",
+  "5A-58B": "https://docs.google.com/spreadsheets/d/e/2PACX-1vTcaC_R_TZJBD9yL4eYoIowjLHy-bu4-BiYfplv_LZdHoELcNenvx3xu1lBeAFedw/pub?gid=GID_UNTUK_5A_58B&single=true&output=csv",
+  "5C-69B": "https://docs.google.com/spreadsheets/d/e/2PACX-1vTcaC_R_TZJBD9yL4eYoIowjLHy-bu4-BiYfplv_LZdHoELcNenvx3xu1lBeAFedw/pub?gid=GID_UNTUK_5C_69B&single=true&output=csv",
+  "4E-21":  "https://docs.google.com/spreadsheets/d/e/2PACX-1vTcaC_R_TZJBD9yL4eYoIowjLHy-bu4-BiYfplv_LZdHoELcNenvx3xu1lBeAFedw/pub?gid=GID_UNTUK_4E_21&single=true&output=csv",
+  "5B-88":  "https://docs.google.com/spreadsheets/d/e/2PACX-1vTcaC_R_TZJBD9yL4eYoIowjLHy-bu4-BiYfplv_LZdHoELcNenvx3xu1lBeAFedw/pub?gid=GID_UNTUK_5B_88&single=true&output=csv"
 };
 
+const SHEETS = Object.keys(CSV_URLS);
 let selectedLoc = SHEETS[0];
-let charts = {};
+let tphChartInstance = null;
 
 function init() {
   const select = document.getElementById("loc");
@@ -166,60 +78,76 @@ function init() {
 
   select.addEventListener("change", (e) => {
     selectedLoc = e.target.value;
-    render();
+    loadSheetData();
   });
 
-  render();
+  loadSheetData();
 }
 
-function render() {
-  const rekap = REKAP_DATA[selectedLoc];
-  
+function loadSheetData() {
+  const statusEl = document.getElementById("syncStatus");
+  statusEl.textContent = "⏳ Membaca data CSV...";
+
+  const csvUrl = CSV_URLS[selectedLoc];
+
+  Papa.parse(csvUrl, {
+    download: true,
+    header: true, // Membaca baris pertama sebagai nama header kolom
+    skipEmptyLines: true,
+    complete: function(results) {
+      statusEl.textContent = "✅ Data diperbarui: " + new Date().toLocaleTimeString();
+      processAndRender(results.data);
+    },
+    error: function(err) {
+      console.error(err);
+      statusEl.textContent = "❌ Gagal membaca CSV. Pastikan link dipublikasikan sebagai CSV.";
+    }
+  });
+}
+
+function processAndRender(rows) {
+  if (!rows || rows.length === 0) return;
+
+  // Temukan nama header secara fleksibel (pencarian kata kunci)
+  const firstRowKeys = Object.keys(rows[0]);
+  const findKey = (keyword) => firstRowKeys.find(k => k.toUpperCase().includes(keyword.toUpperCase()));
+
+  const keyT1   = findKey("T1");
+  const keyT2   = findKey("T2");
+  const keyT3   = findKey("T3");
+  const keyLast = findKey("LAST") || findKey("LAST TPH");
+
+  let countT1 = 0, countT2 = 0, countT3 = 0, countLast = 0;
+
+  rows.forEach(row => {
+    // Cek apakah sel pada kolom tersebut terisi/tidak kosong
+    if (keyT1 && row[keyT1] && row[keyT1].trim() !== "") countT1++;
+    if (keyT2 && row[keyT2] && row[keyT2].trim() !== "") countT2++;
+    if (keyT3 && row[keyT3] && row[keyT3].trim() !== "") countT3++;
+    if (keyLast && row[keyLast] && row[keyLast].trim() !== "") countLast++;
+  });
+
+  const totalGrid = rows.length;
+
+  // Update KPI Cards
   document.getElementById("kpis").innerHTML = `
-    <div class="card"><div class="label">Total Sub-Grid</div><div class="value">${rekap.totalGrid}</div><div class="sub">Total area lokasi</div></div>
-    <div class="card"><div class="label">Inisial TPH</div><div class="value">${rekap.initialTPH}</div><div class="sub">${Math.round(rekap.initialTPH/rekap.totalGrid*100)}% dari Total Grid</div></div>
-    <div class="card"><div class="label">Biostimulasi</div><div class="value">${rekap.biostimulasi}</div><div class="sub">${Math.round(rekap.biostimulasi/rekap.totalGrid*100)}% dari Total Grid</div></div>
-    <div class="card"><div class="label">Bioaugmentasi</div><div class="value">${rekap.bioaugmentasi}</div><div class="sub">${Math.round(rekap.bioaugmentasi/rekap.totalGrid*100)}% dari Total Grid</div></div>
-    <div class="card"><div class="label">Inisial TPC</div><div class="value">${rekap.initialTPC}</div><div class="sub">${Math.round(rekap.initialTPC/rekap.totalGrid*100)}% dari Total Grid</div></div>
-    <div class="card"><div class="label">Inisial Soil</div><div class="value">${rekap.initialSoil}</div><div class="sub">${Math.round(rekap.initialSoil/rekap.totalGrid*100)}% dari Total Grid</div></div>
+    <div class="card"><div class="label">Total Sub-Grid</div><div class="value">${totalGrid}</div><div class="sub">Total baris CSV</div></div>
+    <div class="card"><div class="label">Monitoring T1</div><div class="value">${countT1}</div><div class="sub">Grid terisi</div></div>
+    <div class="card"><div class="label">Monitoring T2</div><div class="value">${countT2}</div><div class="sub">Grid terisi</div></div>
+    <div class="card"><div class="label">Monitoring T3</div><div class="value">${countT3}</div><div class="sub">Grid terisi</div></div>
+    <div class="card"><div class="label">Last TPH</div><div class="value">${countLast}</div><div class="sub">Grid terisi</div></div>
   `;
 
-  document.getElementById("droneBefore").innerHTML = `<div class="drone-empty">Foto Udara Sebelum Pemulihan (${selectedLoc})</div>`;
-  document.getElementById("droneAfter").innerHTML = `<div class="drone-empty">Foto Udara Saat Pemulihan (${selectedLoc})</div>`;
+  // Render Chart
+  if (tphChartInstance) tphChartInstance.destroy();
 
-  renderProgressLists(rekap);
-  renderCharts(rekap);
-}
-
-function renderProgressLists(rekap) {
-  document.getElementById("stages").innerHTML = `
-    <div class="r"><span>Inisial TPH</span><div class="bar"><i style="width:${(rekap.initialTPH/rekap.totalGrid*100)}%"></i></div><b>${rekap.initialTPH}/${rekap.totalGrid}</b></div>
-    <div class="r"><span>Inisial TPC</span><div class="bar"><i style="width:${(rekap.initialTPC/rekap.totalGrid*100)}%"></i></div><b>${rekap.initialTPC}/${rekap.totalGrid}</b></div>
-    <div class="r"><span>Inisial Soil</span><div class="bar"><i style="width:${(rekap.initialSoil/rekap.totalGrid*100)}%"></i></div><b>${rekap.initialSoil}/${rekap.totalGrid}</b></div>
-  `;
-
-  document.getElementById("extra").innerHTML = `
-    <div class="r"><span>Biostimulasi</span><div class="bar"><i style="width:${(rekap.biostimulasi/rekap.totalGrid*100)}%"></i></div><b>${rekap.biostimulasi}/${rekap.totalGrid}</b></div>
-    <div class="r"><span>Bioaugmentasi</span><div class="bar"><i style="width:${(rekap.bioaugmentasi/rekap.totalGrid*100)}%"></i></div><b>${rekap.bioaugmentasi}/${rekap.totalGrid}</b></div>
-  `;
-
-  document.getElementById("initialSoil").innerHTML = `
-    <div class="r"><span>Inisial TPC</span><div class="bar"><i style="width:${(rekap.initialTPC/rekap.totalGrid*100)}%"></i></div><b>${Math.round(rekap.initialTPC/rekap.totalGrid*100)}%</b></div>
-    <div class="r"><span>Inisial pH/Suhu/Kelembaban</span><div class="bar"><i style="width:${(rekap.initialSoil/rekap.totalGrid*100)}%"></i></div><b>${Math.round(rekap.initialSoil/rekap.totalGrid*100)}%</b></div>
-  `;
-}
-
-function renderCharts(rekap) {
-  Object.values(charts).forEach(chart => chart.destroy());
-
-  // 1. Chart TPH Monitoring (Jumlah Grid per Tahap)
-  charts.tph = new Chart(document.getElementById("tphChart"), {
+  tphChartInstance = new Chart(document.getElementById("tphChart"), {
     type: "bar",
     data: {
       labels: ["T1", "T2", "T3", "Last TPH"],
       datasets: [{
         label: "Jumlah Grid Ter-monitoring",
-        data: rekap.tphGridCounts,
+        data: [countT1, countT2, countT3, countLast],
         backgroundColor: "#1c6da4",
         borderRadius: 6
       }]
@@ -231,45 +159,6 @@ function renderCharts(rekap) {
         y: {
           beginAtZero: true,
           title: { display: true, text: "Jumlah Grid" }
-        }
-      }
-    }
-  });
-
-  // 2. Chart Initial Quality
-  charts.qualInit = new Chart(document.getElementById("qualInitialChart"), {
-    type: "doughnut",
-    data: {
-      labels: ["TKA", "TKB", "TKC"],
-      datasets: [{ data: rekap.qualityInit, backgroundColor: ["#e74c3c", "#f39c12", "#2ecc71"] }]
-    },
-    options: { responsive: true, maintainAspectRatio: false }
-  });
-
-  // 3. Chart Progress Quality
-  charts.qualProg = new Chart(document.getElementById("qualProgressChart"), {
-    type: "doughnut",
-    data: {
-      labels: ["TKA", "TKB", "TKC"],
-      datasets: [{ data: rekap.qualityProg, backgroundColor: ["#e74c3c", "#f39c12", "#2ecc71"] }]
-    },
-    options: { responsive: true, maintainAspectRatio: false }
-  });
-
-  // 4. Chart Material
-  charts.mat = new Chart(document.getElementById("matChart"), {
-    type: "bar",
-    data: {
-      labels: ["Urea", "TSP", "Dolomit", "Kohe", "Bulking Agent"],
-      datasets: [{ label: "Penggunaan (kg)", data: rekap.material, backgroundColor: "#27ae60", borderRadius: 6 }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      scales: {
-        y: {
-          beginAtZero: true,
-          title: { display: true, text: "Jumlah Material (kg)" }
         }
       }
     }
