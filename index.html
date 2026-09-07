@@ -238,7 +238,6 @@ function loadSheetData() {
 function processAndRender(rawRows) {
   if (!rawRows || rawRows.length < 7) return;
 
-  // Gabungkan Baris 4, 5, dan 6 (index 3, 4, 5) untuk Header Kolom
   const headerRows = [rawRows[3], rawRows[4], rawRows[5]];
   const totalCols = rawRows[3] ? rawRows[3].length : 0;
   
@@ -271,29 +270,27 @@ function processAndRender(rawRows) {
   const idxProgQ = findColIndex(["PROGRESSQUALITY", "QUALITYPROGRESS", "PROGQUALITY"]);
   const idxBioS  = findColIndex(["BIOSTIMULASI", "STIMULASI"]);
   const idxBioA  = findColIndex(["BIOAUGMENTASI", "AUGMENTASI"]);
-  const idxTPC   = findColIndex(["TPC", "INITIALTPC"]);
-  const idxSoil  = findColIndex(["SOIL", "INISIALPH", "PH", "INISIALSUHU", "SUHU", "INISIALKELEMBABAN", "KELEMBAPAN"]);
+  
+  // Keyword diperketat agar TPC dan Soil terpisah dengan presisi
+  const idxTPC   = findColIndex(["INITIAL TPC", "INISIAL TPC", "TPC"]);
+  const idxSoil  = findColIndex(["INITIAL SOIL", "INISIAL SOIL", "SOIL", "INISIALPH", "PH", "SUHU", "KELEMBAPAN", "KELEMBABAN"]);
+  
   const idxUrea  = findColIndex(["UREA"]);
   const idxTSP   = findColIndex(["TSP"]);
   const idxDolo  = findColIndex(["DOLOMIT", "DOLOMITE"]);
   const idxKohe  = findColIndex(["KOHE"]);
   const idxBulk  = findColIndex(["BULKING", "BULKINGAGENT"]);
 
-  // Ambil data mulai dari baris ke-7 (index 6)
   const rawDataSlice = rawRows.slice(6);
   const dataRows = [];
 
-  // Filter khusus: Potong data SEBELUM baris 'TOTAL' & abaikan baris kosong
   for (let i = 0; i < rawDataSlice.length; i++) {
     const row = rawDataSlice[i];
-    
-    // Cek seluruh isi sel dalam satu baris untuk kata 'TOTAL'
     const rowText = row.join(" ").toUpperCase();
     if (rowText.includes("TOTAL")) {
-      break; // Stop pembacaan data begitu ketemu kata TOTAL
+      break;
     }
 
-    // Pastikan baris memiliki ID Grid atau Subgrid yang valid
     const gridVal = idxGrid !== -1 ? String(row[idxGrid] || "").trim() : "";
     const subVal = idxSub !== -1 ? String(row[idxSub] || "").trim() : "";
 
@@ -348,7 +345,6 @@ function processAndRender(rawRows) {
 
   const totalGrid = dataRows.length;
 
-  // Render KPIs
   document.getElementById("kpis").innerHTML = `
     <div class="card"><div class="label">Total Sub-Grid</div><div class="value">${totalGrid}</div><div class="sub">Total area lokasi</div></div>
     <div class="card"><div class="label">Inisial TPH</div><div class="value">${cInit}</div><div class="sub">${Math.round(cInit/(totalGrid||1)*100)}% dari Total Grid</div></div>
@@ -358,11 +354,9 @@ function processAndRender(rawRows) {
     <div class="card"><div class="label">Inisial Soil</div><div class="value">${cSoil}</div><div class="sub">${Math.round(cSoil/(totalGrid||1)*100)}% dari Total Grid</div></div>
   `;
 
-  // Render Drone
   document.getElementById("droneBefore").innerHTML = `<div class="drone-empty">Foto Udara Sebelum Pemulihan (${selectedLoc})</div>`;
   document.getElementById("droneAfter").innerHTML = `<div class="drone-empty">Foto Udara Saat Pemulihan (${selectedLoc})</div>`;
 
-  // Render Chart TPH
   renderTphChart([cT1, cT2, cT3, cLast]);
   document.getElementById("stats").innerHTML = `
     <div class="stat"><b>${cT1}</b><span>Monitoring T1</span></div>
@@ -372,10 +366,8 @@ function processAndRender(rawRows) {
     <div class="stat"><b>${totalGrid}</b><span>Total Sub-grid</span></div>
   `;
 
-  // Render Quality
   renderQualityCharts(initQ, progQ, totalGrid);
 
-  // Render Material
   document.getElementById("biostats").innerHTML = `
     <div class="bioitem"><b>${matSum.Urea.toLocaleString()}</b><span>Urea (kg)</span></div>
     <div class="bioitem"><b>${matSum.TSP.toLocaleString()}</b><span>TSP (kg)</span></div>
@@ -385,10 +377,8 @@ function processAndRender(rawRows) {
   `;
   renderMaterialChart(matSum);
 
-  // Render Progress
   renderProgressLists(cInit, cTPC, cSoil, cBioS, cBioA, totalGrid);
 
-  // Render Tabel Detail
   renderTableByIndex(dataRows, {
     idxGrid, idxSub, idxInit, idxInitQ, idxT1, idxT2, idxT3, idxLast, idxProgQ, idxUrea, idxTSP, idxDolo, idxKohe, idxBulk
   });
@@ -451,17 +441,6 @@ function renderProgressLists(cInit, cTPC, cSoil, cBioS, cBioA, total) {
     <div class="r"><span>Inisial TPC</span><div class="bar"><i style="width:${(cTPC/t*100)}%"></i></div><b>${cTPC}/${total}</b></div>
     <div class="r"><span>Inisial Soil</span><div class="bar"><i style="width:${(cSoil/t*100)}%"></i></div><b>${cSoil}/${total}</b></div>
   `;
-
-  document.getElementById("extra").innerHTML = `
-    <div class="r"><span>Biostimulasi</span><div class="bar"><i style="width:${(cBioS/t*100)}%"></i></div><b>${cBioS}/${total}</b></div>
-    <div class="r"><span>Bioaugmentasi</span><div class="bar"><i style="width:${(cBioA/t*100)}%"></i></div><b>${cBioA}/${total}</b></div>
-  `;
-
-  document.getElementById("initialSoil").innerHTML = `
-    <div class="r"><span>Inisial TPC</span><div class="bar"><i style="width:${(cTPC/t*100)}%"></i></div><b>${Math.round(cTPC/t*100)}%</b></div>
-    <div class="r"><span>Inisial pH/Suhu/Kelembaban</span><div class="bar"><i style="width:${(cSoil/t*100)}%"></i></div><b>${Math.round(cSoil/t*100)}%</b></div>
-  `;
-}
 
   document.getElementById("extra").innerHTML = `
     <div class="r"><span>Biostimulasi</span><div class="bar"><i style="width:${(cBioS/t*100)}%"></i></div><b>${cBioS}/${total}</b></div>
