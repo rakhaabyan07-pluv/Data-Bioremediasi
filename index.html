@@ -522,7 +522,7 @@ function renderMaterialChart(matSum) {
   chartInstances.mat = new Chart(document.getElementById("matChart"), {
     type: "bar",
     data: {
-      labels: ["Urea (kg)", "TSP (kg)", "Dolomit (kg)", "Kohe (Ton)", "Bulking Agent (m³)"],
+      labels: ["Urea (Kg)", "TSP (Kg)", "Dolomit (Kg)", "Kohe (Ton)", "Bulking Agent (m³)"],
       datasets: [{ label: "Total Material Digunakan", data: [matSum.Urea, matSum.TSP, matSum.Dolomit, matSum.Kohe, matSum.Bulking], backgroundColor: "#2375a6", borderRadius: 6 }]
     },
     options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } } }
