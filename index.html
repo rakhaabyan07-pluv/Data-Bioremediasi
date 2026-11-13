@@ -464,10 +464,10 @@ function processAndRender(rawRows) {
   renderQualityCharts(initQ, progQ, totalGrid);
 
   document.getElementById("biostats").innerHTML = `
-    <div class="bioitem"><b>${matSum.Urea.toLocaleString()}</b><span>Urea (kg)</span></div>
-    <div class="bioitem"><b>${matSum.TSP.toLocaleString()}</b><span>TSP (kg)</span></div>
-    <div class="bioitem"><b>${matSum.Dolomit.toLocaleString()}</b><span>Dolomit (kg)</span></div>
-    <div class="bioitem"><b>${matSum.Kohe.toLocaleString()}</b><span>Kohe (kg)</span></div>
+    <div class="bioitem"><b>${matSum.Urea.toLocaleString()}</b><span>Urea (Kg)</span></div>
+    <div class="bioitem"><b>${matSum.TSP.toLocaleString()}</b><span>TSP (Kg)</span></div>
+    <div class="bioitem"><b>${matSum.Dolomit.toLocaleString()}</b><span>Dolomit (Kg)</span></div>
+    <div class="bioitem"><b>${matSum.Kohe.toLocaleString()}</b><span>Kohe (Ton)</span></div>
     <div class="bioitem"><b>${matSum.Bulking.toLocaleString()}</b><span>Bulking Agent (m³)</span></div>
   `;
   renderMaterialChart(matSum);
