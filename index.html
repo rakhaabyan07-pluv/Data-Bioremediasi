@@ -142,7 +142,7 @@ th{position:sticky;top:0;background:#f7f9fb;z-index:2}
     </section>
     <section class="card">
       <h2>Progress Biostimulasi & Bioaugmentasi</h2>
-      <p class="desc">Persentase pelaksanaan Biostimulasi dan Bioaugmentasi dibandingkan dengan Total Grid.</p>
+      <p class="desc"> Pelaksanaan Biostimulasi dan Bioaugmentasi dibandingkan dengan Total Grid.</p>
       <div id="extra" class="list"></div>
     </section>
   </div>
@@ -522,7 +522,7 @@ function renderMaterialChart(matSum) {
   chartInstances.mat = new Chart(document.getElementById("matChart"), {
     type: "bar",
     data: {
-      labels: ["Urea (kg)", "TSP (kg)", "Dolomit (kg)", "Kohe (kg)", "Bulking Agent (m³)"],
+      labels: ["Urea (kg)", "TSP (kg)", "Dolomit (kg)", "Kohe (Ton)", "Bulking Agent (m³)"],
       datasets: [{ label: "Total Material Digunakan", data: [matSum.Urea, matSum.TSP, matSum.Dolomit, matSum.Kohe, matSum.Bulking], backgroundColor: "#2375a6", borderRadius: 6 }]
     },
     options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } } }
